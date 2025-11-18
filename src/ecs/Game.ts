@@ -1,4 +1,4 @@
-import { SPAWN_INTERVAL } from "../config";
+import { INITIAL_LIVES } from "../config";
 import type { MousePosition } from "../types";
 import { World } from "./core/World";
 import { FruitFactory } from "./entities/createFruit";
@@ -8,8 +8,16 @@ import { MouseTrackSystem } from "./systems/MouseTrackSystem";
 import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
 import { HandTrackingSystem } from "./systems/HandTrackingSystem";
+import { DifficultySystem } from "./systems/DifficultySystem";
 import { wall, apple, orange, banana, watermelon, purple_bomb } from "../assets";
 
+const SAFE_FRUIT_TYPES = ['apple', 'orange', 'banana', 'watermelon'] as const;
+
+interface GameCallbacks {
+    onScoreChange?: (score: number) => void;
+    onLivesChange?: (lives: number) => void;
+    onGameOver?: (finalScore: number) => void;
+}
 
 export class Game {
     private _canvas: HTMLCanvasElement;
@@ -23,7 +31,6 @@ export class Game {
     private _handTrackingSystem: HandTrackingSystem | null;
     private _collisionSystem: CollisionSystem;
     private _lastSpawnTime: number = 0;
-    private _spawnInterval: number = SPAWN_INTERVAL;
     private _frameCount: number = 0;
     private _lastFPSTime: number = 0;
     private _fps: number = 0;
@@ -31,12 +38,16 @@ export class Game {
     private _fruitImages: Map<string, HTMLImageElement> = new Map();
     private _isPlaying = false;
     private _score: number = 0;
+    private _lives: number = INITIAL_LIVES;
     private _onScoreChange?: (score: number) => void;
+    private _onLivesChange?: (lives: number) => void;
+    private _onGameOver?: (finalScore: number) => void;
+    private _difficultySystem: DifficultySystem;
 
     constructor(
         canvas: HTMLCanvasElement,
         handTrackingSystem: HandTrackingSystem | null = null,
-        onScoreChange?: (score: number) => void
+        callbacks: GameCallbacks = {}
     ) {
         this._canvas = canvas;
         this._ctx = this._canvas.getContext('2d')!;
@@ -48,12 +59,20 @@ export class Game {
         this._mouseTrackSystem = new MouseTrackSystem()
         this._handTrackingSystem = handTrackingSystem;
         this._collisionSystem = new CollisionSystem(this._world, (entityId) => this.handleFruitCut(entityId));
-        this._onScoreChange = onScoreChange;
+        this._onScoreChange = callbacks.onScoreChange;
+        this._onLivesChange = callbacks.onLivesChange;
+        this._onGameOver = callbacks.onGameOver;
+        this._difficultySystem = new DifficultySystem();
     }
 
     startGame(): void {
+        this._world.clear();
         this.resetScore();
+        this.resetLives();
         this._isPlaying = true;
+        const now = performance.now();
+        this._lastSpawnTime = now;
+        this._difficultySystem.reset(now);
     }
 
     set mousePosition(mousePos: MousePosition) {
@@ -75,6 +94,17 @@ export class Game {
 
     get score(): number {
         return this._score;
+    }
+
+    get lives(): number {
+        return this._lives;
+    }
+
+    resetLives(): void {
+        this._lives = INITIAL_LIVES;
+        if (this._onLivesChange) {
+            this._onLivesChange(this._lives);
+        }
     }
 
     async loadAssets(): Promise<void> {
@@ -111,8 +141,13 @@ export class Game {
     }
 
     spawnFruit() {
-        for (let i = 0; i < 1; i++) {
-            const fruit = this._fruitFactory.createFruit();
+        const fruitsToSpawn = Math.max(1, this._difficultySystem.fruitsPerSpawn);
+        for (let i = 0; i < fruitsToSpawn; i++) {
+            const fruitType = this.pickFruitType();
+            const fruit = this._fruitFactory.createFruit({
+                forceType: fruitType,
+                speedMultiplier: this._difficultySystem.speedMultiplier
+            });
             this._world.addEntity(fruit);
         }
     }
@@ -130,7 +165,8 @@ export class Game {
         }
         
         if (this._isPlaying) {
-            if (timestamp - this._lastSpawnTime >= this._spawnInterval) {
+            this._difficultySystem.update(timestamp);
+            if (timestamp - this._lastSpawnTime >= this._difficultySystem.spawnInterval) {
                 this.spawnFruit();
                 this._lastSpawnTime = timestamp;
             }
@@ -151,9 +187,18 @@ export class Game {
     }
 
     private handleFruitCut(entityId: string): void {
-        // Найти сущность для определения типа и очков
         const entity = this._world.entities.find(e => e.id === entityId);
-        const fruitType = entity?.components.type?.value;
+        if (!entity) {
+            return;
+        }
+
+        const fruitType = entity.components.type?.value;
+        this._disposalSystem.disposeById(entityId);
+
+        if (fruitType === 'purple_bomb') {
+            this.handleBombHit();
+            return;
+        }
         
         // Очки за разные фрукты: чем больше фрукт, тем больше очков
         const fruitPoints: Record<string, number> = {
@@ -161,16 +206,54 @@ export class Game {
             'apple': 5,       // средний
             'orange': 3,      // средний-маленький
             'banana': 2,       // самый маленький - меньше всего очков
-            'purple_bomb': -10,
         };
 
         const points = fruitPoints[fruitType || ''] || 1;
         this._score = Math.max(0, this._score + points); // Не позволяем счету уйти в минус
         
-        this._disposalSystem.disposeById(entityId);
-        
         if (this._onScoreChange) {
             this._onScoreChange(this._score);
+        }
+    }
+
+    private handleBombHit(): void {
+        this.loseLife(1);
+    }
+
+    private endGame(): void {
+        if (!this._isPlaying) {
+            return;
+        }
+
+        this._isPlaying = false;
+        if (this._onGameOver) {
+            this._onGameOver(this._score);
+        }
+    }
+
+    private pickFruitType(): string {
+        const shouldSpawnBomb = Math.random() < this._difficultySystem.bombChance;
+        if (shouldSpawnBomb) {
+            return 'purple_bomb';
+        }
+
+        const index = Math.floor(Math.random() * SAFE_FRUIT_TYPES.length);
+        return SAFE_FRUIT_TYPES[index];
+    }
+
+    private loseLife(amount: number = 1): void {
+        if (!this._isPlaying || amount <= 0) {
+            return;
+        }
+
+        this._lives = Math.max(0, this._lives - amount);
+
+        if (this._onLivesChange) {
+            this._onLivesChange(this._lives);
+        }
+
+        if (this._lives <= 0) {
+            this.endGame();
         }
     }
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useGame } from './hooks/useGame';
 import { useCamera } from './hooks/useCamera';
 import './FruitNinjaGame.css';
@@ -7,10 +7,13 @@ import { Menu } from './app/components/Menu';
 import './app/components/Menu.css';
 import { useHandTracking } from './hooks/useHandTracking';
 import { HandTrackingSystem } from './ecs/systems/HandTrackingSystem';
+import { INITIAL_LIVES } from './config';
+import { GameOver } from './app/components/GameOver';
 
 enum GameState {
   MENU = 'menu',
-  PLAYING = 'playing'
+  PLAYING = 'playing',
+  GAME_OVER = 'game_over'
 }
 
 export const FruitNinjaGame: React.FC = () => {
@@ -20,6 +23,7 @@ export const FruitNinjaGame: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
   const [handTrackingSystem, setHandTrackingSystem] = useState<HandTrackingSystem | null>(null);
   const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(INITIAL_LIVES);
 
   const { initializeHandTracking, disposeHandTracking } = useHandTracking(dimensions.width, dimensions.height);
 
@@ -36,15 +40,26 @@ export const FruitNinjaGame: React.FC = () => {
   }, [videoRef, dimensions, initializeHandTracking, disposeHandTracking]);
 
 
+  const handleGameOver = useCallback((finalScore: number) => {
+    setScore(finalScore);
+    setGameState(GameState.GAME_OVER);
+  }, [setScore, setGameState]);
+
   const { canvasRef, gameRef } = useGame(
     handTrackingSystem,
     dimensions.width,
     dimensions.height,
-    setScore
+    {
+      onScoreChange: setScore,
+      onLivesChange: setLives,
+      onGameOver: handleGameOver
+    }
   );
 
   const handleStartGame = () => {
     if (gameRef.current) {
+        setScore(0);
+        setLives(INITIAL_LIVES);
         gameRef.current.startGame();
         setGameState(GameState.PLAYING);
     }
@@ -52,7 +67,7 @@ export const FruitNinjaGame: React.FC = () => {
 
   useEffect(() => {
     const handlePinch = () => {
-        if (gameState === GameState.MENU) {
+        if (gameState === GameState.MENU || gameState === GameState.GAME_OVER) {
             handleStartGame();
         }
     };
@@ -88,11 +103,19 @@ export const FruitNinjaGame: React.FC = () => {
             height={dimensions.height}
         />
         {gameState === GameState.PLAYING && (
-          <div className="score-display">
-            Счёт: {score}
+          <div className="game-hud">
+            <div className="hud-item">
+              Счёт: {score}
+            </div>
+            <div className="hud-item">
+              Жизни: {lives}
+            </div>
           </div>
         )}
         {gameState === GameState.MENU && <Menu onStartGame={handleStartGame} />}
+        {gameState === GameState.GAME_OVER && (
+          <GameOver score={score} onRestart={handleStartGame} />
+        )}
       </div>
     </div>
   );
