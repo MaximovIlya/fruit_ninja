@@ -10,10 +10,11 @@ export class MovementSystem {
     for (const entity of entities) {
       const pos = entity.components.position!;
       const vel = entity.components.velocity!;
+      const gravity = entity.components.gravity?.force ?? MovementSystem.gravityFactor;
 
       pos.x += vel.vx;
       pos.y += vel.vy;
-      vel.vy += MovementSystem.gravityFactor;
+      vel.vy += gravity;
     }
   }
 }

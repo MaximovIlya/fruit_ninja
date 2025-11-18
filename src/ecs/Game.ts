@@ -29,8 +29,14 @@ export class Game {
     private _fps: number = 0;
     private _wallImage: HTMLImageElement | null = null;
     private _isPlaying = false;
+    private _score: number = 0;
+    private _onScoreChange?: (score: number) => void;
 
-    constructor(canvas: HTMLCanvasElement, handTrackingSystem: HandTrackingSystem | null = null) {
+    constructor(
+        canvas: HTMLCanvasElement,
+        handTrackingSystem: HandTrackingSystem | null = null,
+        onScoreChange?: (score: number) => void
+    ) {
         this._canvas = canvas;
         this._ctx = this._canvas.getContext('2d')!;
         this._canvasWidth = canvas.width;
@@ -41,9 +47,11 @@ export class Game {
         this._mouseTrackSystem = new MouseTrackSystem()
         this._handTrackingSystem = handTrackingSystem;
         this._collisionSystem = new CollisionSystem(this._world, (entityId) => this.handleFruitCut(entityId));
+        this._onScoreChange = onScoreChange;
     }
 
     startGame(): void {
+        this.resetScore();
         this._isPlaying = true;
     }
 
@@ -55,6 +63,17 @@ export class Game {
         if (this._handTrackingSystem) {
             await this._handTrackingSystem.initializeCamera(videoElement);
         }
+    }
+
+    resetScore(): void {
+        this._score = 0;
+        if (this._onScoreChange) {
+            this._onScoreChange(this._score);
+        }
+    }
+
+    get score(): number {
+        return this._score;
     }
 
     async loadAssets(): Promise<void> {
@@ -105,6 +124,10 @@ export class Game {
 
     private handleFruitCut(entityId: string): void {
         this._disposalSystem.disposeById(entityId);
+        this._score += 1;
+        if (this._onScoreChange) {
+            this._onScoreChange(this._score);
+        }
     }
 
     dispose(): void {

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, type RefObject } from 'react';
 import { usePinchToClick } from '../../hooks/gestures/usePinchToClick';
 
 interface MenuProps {
@@ -7,7 +7,7 @@ interface MenuProps {
 
 export const Menu: React.FC<MenuProps> = ({ onStartGame }) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
-  usePinchToClick(buttonRef, onStartGame);
+  usePinchToClick(buttonRef as RefObject<HTMLElement>, onStartGame);
 
   return (
     <div className="menu">

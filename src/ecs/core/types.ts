@@ -2,6 +2,7 @@ import type { Position } from '../components/position';
 import type { Size } from '../components/size';
 import type { IsCut } from '../components/isCut';
 import type { FingerPositions } from '../components/fingerPosition';
+import type { Gravity } from '../components/gravity';
 
 export type Velocity = {
   vx: number;
@@ -15,6 +16,7 @@ export type FruitType = {
 export type ComponentMap = {
   position?: Position;
   velocity?: Velocity;
+  gravity?: Gravity;
   size?: Size;
   isCut?: IsCut;
   type?: FruitType;

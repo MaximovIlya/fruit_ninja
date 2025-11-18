@@ -19,6 +19,7 @@ export const FruitNinjaGame: React.FC = () => {
   const dimensions = useViewportSize(viewportRef);
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
   const [handTrackingSystem, setHandTrackingSystem] = useState<HandTrackingSystem | null>(null);
+  const [score, setScore] = useState(0);
 
   const { initializeHandTracking, disposeHandTracking } = useHandTracking(dimensions.width, dimensions.height);
 
@@ -35,7 +36,12 @@ export const FruitNinjaGame: React.FC = () => {
   }, [videoRef, dimensions, initializeHandTracking, disposeHandTracking]);
 
 
-  const { canvasRef, gameRef } = useGame(handTrackingSystem, dimensions.width, dimensions.height);
+  const { canvasRef, gameRef } = useGame(
+    handTrackingSystem,
+    dimensions.width,
+    dimensions.height,
+    setScore
+  );
 
   const handleStartGame = () => {
     if (gameRef.current) {
@@ -81,6 +87,11 @@ export const FruitNinjaGame: React.FC = () => {
             width={dimensions.width}
             height={dimensions.height}
         />
+        {gameState === GameState.PLAYING && (
+          <div className="score-display">
+            Счёт: {score}
+          </div>
+        )}
         {gameState === GameState.MENU && <Menu onStartGame={handleStartGame} />}
       </div>
     </div>
