@@ -10,7 +10,7 @@ export type Velocity = {
 };
 
 export type FruitType = {
-  value: 'apple' | 'orange' | 'banana' | 'watermelon';
+  value: 'apple' | 'orange' | 'banana' | 'watermelon' | 'purple_bomb';
 };
 
 export type ComponentMap = {

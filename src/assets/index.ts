@@ -6,6 +6,7 @@ import apple from './apple.png';
 import orange from './lemon.png';
 import banana from './banana.png';
 import watermelon from './watermelon.png';
+import purple_bomb from './purple_bomb.png';
 
 export {
     wall,
@@ -13,4 +14,5 @@ export {
     orange,
     banana,
     watermelon,
+    purple_bomb,
 };

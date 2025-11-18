@@ -8,7 +8,7 @@ import { MouseTrackSystem } from "./systems/MouseTrackSystem";
 import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
 import { HandTrackingSystem } from "./systems/HandTrackingSystem";
-import { wall, apple, orange, banana, watermelon } from "../assets";
+import { wall, apple, orange, banana, watermelon, purple_bomb } from "../assets";
 
 
 export class Game {
@@ -89,6 +89,7 @@ export class Game {
             { name: 'orange', src: orange },
             { name: 'banana', src: banana },
             { name: 'watermelon', src: watermelon },
+            { name: 'purple_bomb', src: purple_bomb }, // Используем purple_bomd.png, но сохраняем как purple_bomb
         ];
 
         const loadPromises = fruitAssets.map(({ name, src }) => {
@@ -150,8 +151,24 @@ export class Game {
     }
 
     private handleFruitCut(entityId: string): void {
+        // Найти сущность для определения типа и очков
+        const entity = this._world.entities.find(e => e.id === entityId);
+        const fruitType = entity?.components.type?.value;
+        
+        // Очки за разные фрукты: чем больше фрукт, тем больше очков
+        const fruitPoints: Record<string, number> = {
+            'watermelon': 10, // самый большой - больше всего очков
+            'apple': 5,       // средний
+            'orange': 3,      // средний-маленький
+            'banana': 2,       // самый маленький - меньше всего очков
+            'purple_bomb': -10,
+        };
+
+        const points = fruitPoints[fruitType || ''] || 1;
+        this._score = Math.max(0, this._score + points); // Не позволяем счету уйти в минус
+        
         this._disposalSystem.disposeById(entityId);
-        this._score += 1;
+        
         if (this._onScoreChange) {
             this._onScoreChange(this._score);
         }
