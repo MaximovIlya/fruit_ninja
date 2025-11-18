@@ -21,11 +21,22 @@ export class FruitFactory {
     
     // Разная гравитация для разных фруктов
     const gravityForces: Record<string, number> = {
-      'apple': 0.5,
-      'orange': 0.45,
-      'banana': 0.4,
-      'watermelon': 0.6 // арбуз тяжелее - быстрее падает
+      'apple': 0.45,
+      'orange': 0.4,
+      'banana': 0.35,
+      'watermelon': 0.5 // арбуз тяжелее - быстрее падает
     };
+
+    // Размеры фруктов: арбуз самый большой, банан самый маленький
+    const fruitSizes: Record<string, { min: number; max: number }> = {
+      'watermelon': { min: 55, max: 60 }, // самый большой
+      'apple': { min: 40, max: 45 },      // средний
+      'orange': { min: 35, max: 42 },     // средний-маленький
+      'banana': { min: 30, max: 36 }      // самый маленький
+    };
+
+    const sizeRange = fruitSizes[fruitType] || { min: 30, max: 35 };
+    const radius = sizeRange.min + Math.random() * (sizeRange.max - sizeRange.min);
 
     return {
       id: Math.random().toString(36).substr(2, 9),
@@ -42,7 +53,7 @@ export class FruitFactory {
           force: gravityForces[fruitType] || 0.5,
         },
         size: {
-          radius: 30 + Math.random() * 20,
+          radius: radius,
         },
         isCut: {
           isCut: false,

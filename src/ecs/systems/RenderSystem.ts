@@ -2,7 +2,7 @@ import type { FingerPositions } from "../components/fingerPosition";
 import type { Entity } from "../core/types";
 
 export class RenderSystem {
-  static process(ctx: CanvasRenderingContext2D, entities: Entity[], videoElement: HTMLVideoElement | null, wallImage: HTMLImageElement | null, fingerPositions?: FingerPositions, fps?: number) {
+  static process(ctx: CanvasRenderingContext2D, entities: Entity[], videoElement: HTMLVideoElement | null, wallImage: HTMLImageElement | null, fruitImages: Map<string, HTMLImageElement>, fingerPositions?: FingerPositions, fps?: number) {
     // Clear with transparent background instead of solid color
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
@@ -48,30 +48,45 @@ export class RenderSystem {
       }
 
       // Draw fruit based on type
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, size.radius, 0, Math.PI * 2);
+      const fruitImage = fruitImages.get(type.value);
+      const diameter = size.radius * 2;
 
-      switch (type.value) {
-        case "apple":
-          ctx.fillStyle = "#ff4757";
-          break;
-        case "orange":
-          ctx.fillStyle = "#ff7f0e";
-          break;
-        case "banana":
-          ctx.fillStyle = "#ffa502";
-          break;
-        case "watermelon":
-          ctx.fillStyle = "#2ed573";
-          break;
-        default:
-          ctx.fillStyle = "#747d8c";
+      if (fruitImage) {
+        // Draw fruit image
+        ctx.drawImage(
+          fruitImage,
+          pos.x - size.radius,
+          pos.y - size.radius,
+          diameter,
+          diameter
+        );
+      } else {
+        // Fallback to colored circle if image not loaded
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, size.radius, 0, Math.PI * 2);
+
+        switch (type.value) {
+          case "apple":
+            ctx.fillStyle = "#ff4757";
+            break;
+          case "orange":
+            ctx.fillStyle = "#ff7f0e";
+            break;
+          case "banana":
+            ctx.fillStyle = "#ffa502";
+            break;
+          case "watermelon":
+            ctx.fillStyle = "#2ed573";
+            break;
+          default:
+            ctx.fillStyle = "#747d8c";
+        }
+
+        ctx.fill();
+        ctx.strokeStyle = "#2f3542";
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
-
-      ctx.fill();
-      ctx.strokeStyle = "#2f3542";
-      ctx.lineWidth = 2;
-      ctx.stroke();
 
       ctx.restore();
     }
