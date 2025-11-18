@@ -1,0 +1,55 @@
+.game-over {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 3rem;
+  border-radius: 1rem;
+  z-index: 10;
+  min-width: 400px;
+}
+
+.game-over h1 {
+  font-size: 4rem;
+  margin-bottom: 2rem;
+  color: #ff4757;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.score-display-final {
+  margin: 2rem 0;
+  font-size: 1.5rem;
+}
+
+.score-display-final p {
+  margin: 0.5rem 0;
+}
+
+.score-value {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ffa502;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.game-over button {
+  width: 400px;
+  height: 100px;
+  font-size: 2.5rem;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  margin-top: 2rem;
+  transition: background-color 0.3s;
+}
+
+.game-over button:hover {
+  background-color: #45a049;
+}
+

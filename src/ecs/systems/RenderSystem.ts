@@ -78,6 +78,9 @@ export class RenderSystem {
           case "watermelon":
             ctx.fillStyle = "#2ed573";
             break;
+          case "purple_bomb":
+            ctx.fillStyle = "#9b59b6"; // Фиолетовый цвет для бомбы
+            break;
           default:
             ctx.fillStyle = "#747d8c";
         }

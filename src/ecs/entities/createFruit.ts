@@ -1,6 +1,6 @@
 import type { Entity } from "../core/types";
 
-const FRUIT_TYPES = ['apple', 'orange', 'banana', 'watermelon'] as const;
+const FRUIT_TYPES = ['apple', 'orange', 'banana', 'watermelon', 'purple_bomb'] as const;
 
 export class FruitFactory {
   constructor(
@@ -24,7 +24,8 @@ export class FruitFactory {
       'apple': 0.45,
       'orange': 0.4,
       'banana': 0.35,
-      'watermelon': 0.5 // арбуз тяжелее - быстрее падает
+      'watermelon': 0.5, // арбуз тяжелее - быстрее падает
+      'purple_bomb': 0.4
     };
 
     // Размеры фруктов: арбуз самый большой, банан самый маленький
@@ -32,7 +33,8 @@ export class FruitFactory {
       'watermelon': { min: 55, max: 60 }, // самый большой
       'apple': { min: 40, max: 45 },      // средний
       'orange': { min: 35, max: 42 },     // средний-маленький
-      'banana': { min: 30, max: 36 }      // самый маленький
+      'banana': { min: 30, max: 36 },
+      'purple_bomb': {min: 40, max: 45}
     };
 
     const sizeRange = fruitSizes[fruitType] || { min: 30, max: 35 };
