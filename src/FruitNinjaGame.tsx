@@ -9,6 +9,7 @@ import { useHandTracking } from './hooks/useHandTracking';
 import { HandTrackingSystem } from './ecs/systems/HandTrackingSystem';
 import { INITIAL_LIVES } from './config';
 import { GameOver } from './app/components/GameOver';
+import { useSound } from './hooks/useSound';
 
 enum GameState {
   MENU = 'menu',
@@ -27,6 +28,13 @@ export const FruitNinjaGame: React.FC = () => {
 
   const { initializeHandTracking, disposeHandTracking } = useHandTracking(dimensions.width, dimensions.height);
 
+  const { loadSounds, playSliceSound, playBombSound } = useSound();
+
+
+  useEffect(() => {
+    loadSounds();
+  }, [loadSounds]);
+
   useEffect(() => {
     if (videoRef.current && dimensions.width > 0 && dimensions.height > 0) {
       initializeHandTracking(videoRef.current).then(system => {
@@ -35,7 +43,7 @@ export const FruitNinjaGame: React.FC = () => {
     }
 
     return () => {
-        disposeHandTracking();
+      disposeHandTracking();
     }
   }, [videoRef, dimensions, initializeHandTracking, disposeHandTracking]);
 
@@ -53,38 +61,43 @@ export const FruitNinjaGame: React.FC = () => {
       onScoreChange: setScore,
       onLivesChange: setLives,
       onGameOver: handleGameOver
+    },
+    {
+      playSliceSound,
+      playBombSound // ДОБАВЬТЕ ЭТО
     }
   );
 
-  const handleStartGame = () => {
+  // В компоненте FruitNinjaGame
+  const handleStartGame = useCallback(() => {
     if (gameRef.current) {
-        setScore(0);
-        setLives(INITIAL_LIVES);
-        gameRef.current.startGame();
-        setGameState(GameState.PLAYING);
+      setScore(0);
+      setLives(INITIAL_LIVES);
+      gameRef.current.startGame();
+      setGameState(GameState.PLAYING);
     }
-  };
+  }, [gameRef]);
 
   useEffect(() => {
     const handlePinch = () => {
-        if (gameState === GameState.MENU || gameState === GameState.GAME_OVER) {
-            handleStartGame();
-        }
+      if (gameState === GameState.MENU || gameState === GameState.GAME_OVER) {
+        handleStartGame();
+      }
     };
 
     window.addEventListener('pinch', handlePinch);
 
     return () => {
-        window.removeEventListener('pinch', handlePinch);
+      window.removeEventListener('pinch', handlePinch);
     };
-  }, [gameState, gameRef]);
+  }, [gameState, handleStartGame]);
 
   return (
     <div className="game-container">
       {isLoading && <div className="loading">Loading camera...</div>}
       {error && <div className="error">{error}</div>}
-      
-      <div 
+
+      <div
         ref={viewportRef}
         className="game-viewport"
       >
@@ -97,10 +110,10 @@ export const FruitNinjaGame: React.FC = () => {
           muted
         />
         <canvas
-            ref={canvasRef}
-            className="game-canvas"
-            width={dimensions.width}
-            height={dimensions.height}
+          ref={canvasRef}
+          className="game-canvas"
+          width={dimensions.width}
+          height={dimensions.height}
         />
         {gameState === GameState.PLAYING && (
           <div className="game-hud">

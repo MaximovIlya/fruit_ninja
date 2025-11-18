@@ -43,11 +43,17 @@ export class Game {
     private _onLivesChange?: (lives: number) => void;
     private _onGameOver?: (finalScore: number) => void;
     private _difficultySystem: DifficultySystem;
+    private _playSliceSound?: () => void;
+    private _playBombSound?: () => void;
 
     constructor(
         canvas: HTMLCanvasElement,
         handTrackingSystem: HandTrackingSystem | null = null,
-        callbacks: GameCallbacks = {}
+        callbacks: GameCallbacks = {},
+        soundCallBacks?: {
+            playSliceSound: () => void;
+            playBombSound: () => void;
+        }
     ) {
         this._canvas = canvas;
         this._ctx = this._canvas.getContext('2d')!;
@@ -63,6 +69,11 @@ export class Game {
         this._onLivesChange = callbacks.onLivesChange;
         this._onGameOver = callbacks.onGameOver;
         this._difficultySystem = new DifficultySystem();
+
+        if (soundCallBacks) {
+            this._playSliceSound = soundCallBacks.playSliceSound;
+            this._playBombSound = soundCallBacks.playBombSound;
+        }
     }
 
     startGame(): void {
@@ -163,20 +174,20 @@ export class Game {
             this._frameCount = 0;
             this._lastFPSTime = timestamp;
         }
-        
+
         if (this._isPlaying) {
             this._difficultySystem.update(timestamp);
             if (timestamp - this._lastSpawnTime >= this._difficultySystem.spawnInterval) {
                 this.spawnFruit();
                 this._lastSpawnTime = timestamp;
             }
-    
+
             MovementSystem.process(this._world);
             this._disposalSystem.process();
-    
+
             const mousePoints = this._mouseTrackSystem.mousePosition ? [this._mouseTrackSystem.mousePosition] : [];
             const fingerPositions = this._handTrackingSystem ? this._handTrackingSystem.fingerPositions : { landmarks: [], edges: [] };
-            
+
             this._collisionSystem.process(mousePoints, fingerPositions);
 
             RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem?.videoElement ?? null, this._wallImage, this._fruitImages, fingerPositions, this._fps);
@@ -186,6 +197,7 @@ export class Game {
         }
     }
 
+    // В классе Game, метод handleFruitCut
     private handleFruitCut(entityId: string): void {
         const entity = this._world.entities.find(e => e.id === entityId);
         if (!entity) {
@@ -193,24 +205,43 @@ export class Game {
         }
 
         const fruitType = entity.components.type?.value;
+        console.log('Fruit cut:', fruitType); // ДЛЯ ОТЛАДКИ
+
         this._disposalSystem.disposeById(entityId);
 
         if (fruitType === 'purple_bomb') {
             this.handleBombHit();
+            
+            if (this._playBombSound) {
+                console.log('Playing bomb sound');
+                this._playBombSound();
+            } else {
+                console.log('No bomb sound callback available');
+            }
             return;
         }
-        
+
         // Очки за разные фрукты: чем больше фрукт, тем больше очков
         const fruitPoints: Record<string, number> = {
-            'watermelon': 10, // самый большой - больше всего очков
-            'apple': 5,       // средний
-            'orange': 3,      // средний-маленький
-            'banana': 2,       // самый маленький - меньше всего очков
+            'watermelon': 10,
+            'apple': 5,
+            'orange': 3,
+            'banana': 2,
         };
 
         const points = fruitPoints[fruitType || ''] || 1;
-        this._score = Math.max(0, this._score + points); // Не позволяем счету уйти в минус
-        
+        this._score = Math.max(0, this._score + points);
+
+        // ОТЛАДКА: проверяем, доступен ли звуковой колбэк
+        console.log('Sound callback available:', !!this._playSliceSound);
+
+        if (this._playSliceSound) {
+            console.log('Playing slice sound'); // ДЛЯ ОТЛАДКИ
+            this._playSliceSound();
+        } else {
+            console.log('No sound callback'); // ДЛЯ ОТЛАДКИ
+        }
+
         if (this._onScoreChange) {
             this._onScoreChange(this._score);
         }
