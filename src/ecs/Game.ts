@@ -8,7 +8,7 @@ import { MouseTrackSystem } from "./systems/MouseTrackSystem";
 import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
 import { HandTrackingSystem } from "./systems/HandTrackingSystem";
-import { wall } from "../assets";
+import { wall, apple, orange, banana, watermelon } from "../assets";
 
 
 export class Game {
@@ -28,6 +28,7 @@ export class Game {
     private _lastFPSTime: number = 0;
     private _fps: number = 0;
     private _wallImage: HTMLImageElement | null = null;
+    private _fruitImages: Map<string, HTMLImageElement> = new Map();
     private _isPlaying = false;
     private _score: number = 0;
     private _onScoreChange?: (score: number) => void;
@@ -77,9 +78,35 @@ export class Game {
     }
 
     async loadAssets(): Promise<void> {
+        // Load wall image
         this._wallImage = new Image();
         this._wallImage.src = wall;
         await this._wallImage.decode();
+
+        // Load fruit images
+        const fruitAssets = [
+            { name: 'apple', src: apple },
+            { name: 'orange', src: orange },
+            { name: 'banana', src: banana },
+            { name: 'watermelon', src: watermelon },
+        ];
+
+        const loadPromises = fruitAssets.map(({ name, src }) => {
+            return new Promise<void>((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    this._fruitImages.set(name, img);
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.warn(`Failed to load image for ${name}, using fallback`);
+                    resolve(); // Continue even if image fails
+                };
+                img.src = src;
+            });
+        });
+
+        await Promise.all(loadPromises);
     }
 
     spawnFruit() {
@@ -115,10 +142,10 @@ export class Game {
             
             this._collisionSystem.process(mousePoints, fingerPositions);
 
-            RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem?.videoElement ?? null, this._wallImage, fingerPositions, this._fps);
+            RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem?.videoElement ?? null, this._wallImage, this._fruitImages, fingerPositions, this._fps);
         } else {
             const fingerPositions = this._handTrackingSystem ? this._handTrackingSystem.fingerPositions : { landmarks: [], edges: [] };
-            RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem?.videoElement ?? null, this._wallImage, fingerPositions, this._fps);
+            RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem?.videoElement ?? null, this._wallImage, this._fruitImages, fingerPositions, this._fps);
         }
     }
 
