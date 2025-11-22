@@ -1,7 +1,8 @@
-import type { World } from "../ecs/core/World";
+import { GRAVITY_FACTOR } from "../../config";
+import type { World } from "../core/World";
 
 export class MovementSystem {
-  static gravityFactor = 0.11;
+  static gravityFactor = GRAVITY_FACTOR;
   
   static process(world: World): void {
     const entities = world.getEntitiesWithComponents('position', 'velocity');

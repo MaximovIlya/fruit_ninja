@@ -27,9 +27,9 @@ export const useCanvasAnimation = () => {
         game.spawnFruit();
         gameRef.current = game;
 
-        const gameLoop = () => {
-        game.update();
-        animationRef.current = requestAnimationFrame(gameLoop);
+        const gameLoop = (timestamp: number) => {
+            game.update(timestamp);
+            animationRef.current = requestAnimationFrame(gameLoop);
         };
 
         animationRef.current = requestAnimationFrame(gameLoop);

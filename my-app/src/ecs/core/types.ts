@@ -24,10 +24,6 @@ export type Entity = {
   components: ComponentMap;
 };
 
-export type World = {
-  entities: Entity[];
-};
-
 export interface System {
   process(...args: any[]): void;
 }

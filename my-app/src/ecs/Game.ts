@@ -1,3 +1,4 @@
+import { SPAWN_INTERVAL } from "../config";
 import type { MousePosition } from "../types";
 import { World } from "./core/World";
 import { FruitFactory } from "./entities/createFruit";
@@ -16,6 +17,8 @@ export class Game {
     private _disposalSystem: DisposalSystem;
     private _mouseTrackSystem: MouseTrackSystem;
     private _collisionSystem: CollisionSystem;
+    private _lastSpawnTime: number = 0;
+    private _spawnInterval: number = SPAWN_INTERVAL;
 
     constructor(private _canvas: HTMLCanvasElement) {
         this._ctx = this._canvas.getContext('2d')!;
@@ -39,7 +42,12 @@ export class Game {
         }
     }
 
-    update() {
+    update(timestamp: number = performance.now()) {
+        if (timestamp - this._lastSpawnTime >= this._spawnInterval) {
+            this.spawnFruit();
+            this._lastSpawnTime = timestamp;
+        }
+
         MovementSystem.process(this._world);
         this._disposalSystem.process();
 
@@ -51,7 +59,6 @@ export class Game {
     }
 
     private handleFruitCut(entityId: string): void {
-        // Remove the cut fruit immediately
         this._disposalSystem.disposeById(entityId);
     }
 
