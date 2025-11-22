@@ -16,8 +16,8 @@ export class FruitFactory {
           y: this._canvasHeight + 50,
         },
         velocity: {
-          vx: (Math.random() - 0.5) * 2,
-          vy: -Math.random() * 2 - 10,
+          vx: (Math.random() - 0.5) * 10,
+          vy: -Math.random() * 4 - 10,
         },
         size: {
           radius: 30 + Math.random() * 20,
