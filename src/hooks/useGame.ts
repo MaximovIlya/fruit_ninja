@@ -2,20 +2,31 @@ import { useRef, useEffect } from "react";
 import { Game } from "../ecs/Game";
 import { HandTrackingSystem } from "../ecs/systems/HandTrackingSystem";
 
+interface GameHookCallbacks {
+    onScoreChange?: (score: number) => void;
+    onLivesChange?: (lives: number) => void;
+    onGameOver?: (finalScore: number) => void;
+}
+
 export const useGame = (
     handTrackingSystem: HandTrackingSystem | null,
     width: number,
     height: number,
-    onScoreChange?: (score: number) => void
+    callbacks: GameHookCallbacks = {}
 ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const gameRef = useRef<Game | null>(null);
+    const { onScoreChange, onLivesChange, onGameOver } = callbacks;
 
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || width === 0 || height === 0) return;
 
-        const game = new Game(canvas, handTrackingSystem, onScoreChange);
+        const game = new Game(canvas, handTrackingSystem, {
+            onScoreChange,
+            onLivesChange,
+            onGameOver
+        });
         game.loadAssets().catch(console.error);
         gameRef.current = game;
 
@@ -31,7 +42,7 @@ export const useGame = (
             game.dispose();
         };
 
-    }, [width, height, handTrackingSystem, onScoreChange]);
+    }, [width, height, handTrackingSystem, onScoreChange, onLivesChange, onGameOver]);
 
     return {
         canvasRef,
