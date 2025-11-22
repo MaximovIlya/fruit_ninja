@@ -9,6 +9,8 @@ import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
 import { HandTrackingSystem } from "./systems/HandTrackingSystem";
 import { PinchClickStrategy } from './systems/gestures/PinchClickStrategy';
+import { wall } from "../assets";
+
 
 export class Game {
     private _canvas: HTMLCanvasElement;
@@ -26,6 +28,7 @@ export class Game {
     private _frameCount: number = 0;
     private _lastFPSTime: number = 0;
     private _fps: number = 0;
+    private _wallImage: HTMLImageElement | null = null;
 
     constructor(canvas: HTMLCanvasElement) {
         this._canvas = canvas;
@@ -46,6 +49,12 @@ export class Game {
 
     async initializeHandTracking(videoElement: HTMLVideoElement): Promise<void> {
         await this._handTrackingSystem.initializeCamera(videoElement);
+    }
+
+    async loadAssets(): Promise<void> {
+        this._wallImage = new Image();
+        this._wallImage.src = wall;
+        await this._wallImage.decode();
     }
 
     spawnFruit() {
@@ -80,7 +89,7 @@ export class Game {
         
         this._collisionSystem.process(mousePoints, fingerPositions);
 
-        RenderSystem.process(this._ctx, this._world.entities, fingerPositions, this._fps);
+        RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem.videoElement, this._wallImage, fingerPositions, this._fps);
     }
 
     private handleFruitCut(entityId: string): void {

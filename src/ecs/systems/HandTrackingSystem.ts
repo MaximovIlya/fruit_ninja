@@ -6,6 +6,7 @@ import type { GestureStrategy } from './gestures/GestureStrategy';
 export class HandTrackingSystem {
   private _hands: Hands;
   private _camera: Camera | null = null;
+  private _videoElement: HTMLVideoElement | null = null;
   private _fingerPositions: FingerPositions = { landmarks: [], edges: [] };
   private _canvasWidth: number;
   private _canvasHeight: number;
@@ -84,6 +85,7 @@ export class HandTrackingSystem {
   }
 
   async initializeCamera(videoElement: HTMLVideoElement): Promise<void> {
+    this._videoElement = videoElement;
     this._camera = new Camera(videoElement, {
       onFrame: async () => {
         await this._hands.send({ image: videoElement });
@@ -97,6 +99,10 @@ export class HandTrackingSystem {
 
   get fingerPositions(): FingerPositions {
     return this._fingerPositions;
+  }
+
+  get videoElement(): HTMLVideoElement | null {
+    return this._videoElement;
   }
 
   dispose(): void {

@@ -2,9 +2,25 @@ import type { FingerPositions } from "../components/fingerPosition";
 import type { Entity } from "../core/types";
 
 export class RenderSystem {
-  static process(ctx: CanvasRenderingContext2D, entities: Entity[], fingerPositions?: FingerPositions, fps?: number) {
+  static process(ctx: CanvasRenderingContext2D, entities: Entity[], videoElement: HTMLVideoElement | null, wallImage: HTMLImageElement | null, fingerPositions?: FingerPositions, fps?: number) {
     // Clear with transparent background instead of solid color
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    if (videoElement) {
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.translate(-ctx.canvas.width, 0);
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(videoElement, 0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.restore();
+    }
+
+    if (wallImage) {
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+        ctx.drawImage(wallImage, 0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.restore();
+    }
 
     // Draw FPS
     if (fps) {

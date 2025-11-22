@@ -1,4 +1,3 @@
-
 .game-container {
   display: flex;
   flex-direction: column;
@@ -24,7 +23,7 @@
   height: 100%;
   object-fit: cover;
   z-index: 1;
-  transform: scaleX(-1); /* Flip camera horizontally to fix mirroring */
+  display: none;
 }
 
 .game-canvas {

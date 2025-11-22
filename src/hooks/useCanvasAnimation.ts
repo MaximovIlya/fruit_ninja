@@ -42,7 +42,9 @@ export const useCanvasAnimation = (
         // Initialize hand tracking when video element is available
         const videoElement = videoRef.current;
         if (videoElement) {
-            game.initializeHandTracking(videoElement).catch(console.error);
+            game.loadAssets().then(() => {
+                game.initializeHandTracking(videoElement).catch(console.error);
+            }).catch(console.error);
         }
 
         const gameLoop = (timestamp: number) => {
@@ -54,14 +56,14 @@ export const useCanvasAnimation = (
         animationRef.current = requestAnimationFrame(gameLoop);
 
         return () => {
-        canvas.removeEventListener('mousemove', handleMouseMove);
-        if (animationRef.current) {
-            cancelAnimationFrame(animationRef.current);
-        }
-        if (gameRef.current) {
-            gameRef.current.dispose();
-            gameRef.current = null;
-        }
+            canvas.removeEventListener('mousemove', handleMouseMove);
+            if (animationRef.current) {
+                cancelAnimationFrame(animationRef.current);
+            }
+            if (gameRef.current) {
+                gameRef.current.dispose();
+                gameRef.current = null;
+            }
         };
     }, [width, height, videoRef]);
 
