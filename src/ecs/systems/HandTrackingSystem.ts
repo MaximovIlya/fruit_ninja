@@ -1,6 +1,7 @@
 import { Camera } from '@mediapipe/camera_utils';
 import { Hands, type Results } from '@mediapipe/hands';
 import type { FingerPositions } from '../components/fingerPosition';
+import type { GestureStrategy } from './gestures/GestureStrategy';
 
 export class HandTrackingSystem {
   private _hands: Hands;
@@ -8,20 +9,20 @@ export class HandTrackingSystem {
   private _fingerPositions: FingerPositions = { landmarks: [], edges: [] };
   private _canvasWidth: number;
   private _canvasHeight: number;
+  private _strategies: GestureStrategy[];
 
-  // Hand landmark connections based on MediaPipe model
   private readonly HAND_CONNECTIONS = [
-    [0, 1], [1, 2], [2, 3], [3, 4],     // Thumb
-    [0, 5], [5, 6], [6, 7], [7, 8],     // Index finger
-    [5, 9], [9, 10], [10, 11], [11, 12], // Middle finger
-    [9, 13], [13, 14], [14, 15], [15, 16], // Ring finger
-    [13, 17], [17, 18], [18, 19], [19, 20], // Pinky
-    [0, 17] // Connect wrist to pinky base
+    [2, 3], [3, 4],     // Thumb
+    [6, 7], [7, 8],     // Index finger
+    [10, 11], [11, 12], // Middle finger
+    [14, 15], [15, 16], // Ring finger
+    [18, 19], [19, 20]  // Pinky
   ];
 
-  constructor(canvasWidth: number, canvasHeight: number) {
+  constructor(canvasWidth: number, canvasHeight: number, strategies: GestureStrategy[]) {
     this._canvasWidth = canvasWidth;
     this._canvasHeight = canvasHeight;
+    this._strategies = strategies;
     this._hands = new Hands({
       locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
@@ -29,8 +30,8 @@ export class HandTrackingSystem {
     });
 
     this._hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
+      maxNumHands: 1,
+      modelComplexity: 0,
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5
     });
@@ -41,31 +42,42 @@ export class HandTrackingSystem {
   private onResults(results: Results): void {
     this._fingerPositions.landmarks = [];
     this._fingerPositions.edges = [];
-    
+
     if (results.multiHandLandmarks) {
+      const fingerLandmarkIndices = [2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15, 16, 18, 19, 20];
+
       for (let handIndex = 0; handIndex < results.multiHandLandmarks.length; handIndex++) {
         const landmarks = results.multiHandLandmarks[handIndex];
         
-        // Get all hand landmarks (0-20)
-        landmarks.forEach((landmark, landmarkIndex) => {
-          if (landmark) {
-            this._fingerPositions.landmarks.push({
-              x: (1 - landmark.x) * this._canvasWidth, // Flip horizontally to fix mirroring
-              y: landmark.y * this._canvasHeight,
-              visibility: landmark.visibility || 1,
-              id: `hand${handIndex}_landmark${landmarkIndex}`
-            });
-          }
+        for (const strategy of this._strategies) {
+          strategy.update(landmarks, this._canvasWidth, this._canvasHeight);
+        }
+        
+        const currentHandLandmarks = fingerLandmarkIndices.map((landmarkIndex) => {
+          const landmark = landmarks[landmarkIndex]!;
+          return {
+            x: (1 - landmark.x) * this._canvasWidth, // Flip horizontally to fix mirroring
+            y: landmark.y * this._canvasHeight,
+            visibility: landmark.visibility || 1,
+            id: `hand${handIndex}_landmark${landmarkIndex}`
+          };
         });
 
+        const landmarkOffset = this._fingerPositions.landmarks.length;
+        this._fingerPositions.landmarks.push(...currentHandLandmarks);
+
         // Add edges for this hand
-        const handOffset = handIndex * 21; // 21 landmarks per hand
         this.HAND_CONNECTIONS.forEach(([start, end]) => {
-          this._fingerPositions.edges.push({
-            startIndex: handOffset + start,
-            endIndex: handOffset + end,
-            handIndex: handIndex
-          });
+          const startIndex = fingerLandmarkIndices.indexOf(start);
+          const endIndex = fingerLandmarkIndices.indexOf(end);
+
+          if (startIndex !== -1 && endIndex !== -1) {
+            this._fingerPositions.edges.push({
+              startIndex: landmarkOffset + startIndex,
+              endIndex: landmarkOffset + endIndex,
+              handIndex: handIndex
+            });
+          }
         });
       }
     }

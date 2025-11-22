@@ -2,9 +2,18 @@ import type { FingerPositions } from "../components/fingerPosition";
 import type { Entity } from "../core/types";
 
 export class RenderSystem {
-  static process(ctx: CanvasRenderingContext2D, entities: Entity[], fingerPositions?: FingerPositions) {
+  static process(ctx: CanvasRenderingContext2D, entities: Entity[], fingerPositions?: FingerPositions, fps?: number) {
     // Clear with transparent background instead of solid color
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Draw FPS
+    if (fps) {
+        ctx.save();
+        ctx.font = "24px Arial";
+        ctx.fillStyle = "white";
+        ctx.fillText(`FPS: ${fps}`, 10, 30);
+        ctx.restore();
+    }
 
     // Draw fruits
     for (const entity of entities) {
@@ -51,9 +60,10 @@ export class RenderSystem {
       ctx.restore();
     }
 
-    // Draw finger positions as green markers
+    // Draw finger positions as green markers and lines
     if (fingerPositions) {
       ctx.save();
+      // Draw landmarks
       for (const finger of fingerPositions.landmarks) {
         if (finger.visibility > 0.5) {
           ctx.beginPath();
@@ -65,6 +75,21 @@ export class RenderSystem {
           ctx.stroke();
         }
       }
+
+      // Draw edges (skeleton)
+      ctx.beginPath();
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 3;
+      for (const edge of fingerPositions.edges) {
+        const start = fingerPositions.landmarks[edge.startIndex];
+        const end = fingerPositions.landmarks[edge.endIndex];
+        if (start && end && start.visibility > 0.5 && end.visibility > 0.5) {
+          ctx.moveTo(start.x, start.y);
+          ctx.lineTo(end.x, end.y);
+        }
+      }
+      ctx.stroke();
+
       ctx.restore();
     }
   }

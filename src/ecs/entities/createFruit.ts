@@ -1,5 +1,7 @@
 import type { Entity } from "../core/types";
 
+const FRUIT_TYPES = ['apple', 'orange', 'banana', 'watermelon'] as const;
+
 export class FruitFactory {
   constructor(
     private _canvasWidth: number,
@@ -17,7 +19,7 @@ export class FruitFactory {
         },
         velocity: {
           vx: (Math.random() - 0.5) * 10,
-          vy: -Math.random() * 4 - 10,
+          vy: -Math.random() * 10 - 15,
         },
         size: {
           radius: 30 + Math.random() * 20,
@@ -26,8 +28,8 @@ export class FruitFactory {
           isCut: false,
         },
         type: {
-          value: ['apple', 'orange', 'banana', 'watermelon'][
-            Math.floor(Math.random() * 4)
+          value: FRUIT_TYPES[
+            Math.floor(Math.random() * FRUIT_TYPES.length)
           ],
         },
       },

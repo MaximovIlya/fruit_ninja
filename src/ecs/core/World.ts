@@ -1,4 +1,4 @@
-import type { Entity } from './types';
+import type { ComponentMap, Entity } from './types';
 
 export class World {
     private _entities: Entity[] = [];
@@ -22,7 +22,7 @@ export class World {
     getEntitiesWithComponents(...componentNames: string[]): Entity[] {
         return this._entities.filter(entity => 
             componentNames.every(componentName => 
-                entity.components[componentName] !== undefined
+                entity.components[componentName as keyof ComponentMap] !== undefined
             )
         );
     }

@@ -8,8 +8,10 @@ import { MouseTrackSystem } from "./systems/MouseTrackSystem";
 import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
 import { HandTrackingSystem } from "./systems/HandTrackingSystem";
+import { PinchClickStrategy } from './systems/gestures/PinchClickStrategy';
 
 export class Game {
+    private _canvas: HTMLCanvasElement;
     private _ctx: CanvasRenderingContext2D;
     private _canvasHeight: number;
     private _canvasWidth: number;
@@ -21,16 +23,20 @@ export class Game {
     private _collisionSystem: CollisionSystem;
     private _lastSpawnTime: number = 0;
     private _spawnInterval: number = SPAWN_INTERVAL;
+    private _frameCount: number = 0;
+    private _lastFPSTime: number = 0;
+    private _fps: number = 0;
 
-    constructor(private _canvas: HTMLCanvasElement) {
+    constructor(canvas: HTMLCanvasElement) {
+        this._canvas = canvas;
         this._ctx = this._canvas.getContext('2d')!;
-        this._canvasWidth = this._canvas.width;
-        this._canvasHeight = this._canvas.height;
+        this._canvasWidth = canvas.width;
+        this._canvasHeight = canvas.height;
         this._world = new World();
         this._fruitFactory = new FruitFactory(this._canvasWidth, this._canvasHeight);
         this._disposalSystem = new DisposalSystem(this._canvasHeight, this._world);
         this._mouseTrackSystem = new MouseTrackSystem()
-        this._handTrackingSystem = new HandTrackingSystem(this._canvasWidth, this._canvasHeight);
+        this._handTrackingSystem = new HandTrackingSystem(this._canvasWidth, this._canvasHeight, [new PinchClickStrategy()]);
         this._collisionSystem = new CollisionSystem(this._world, (entityId) => this.handleFruitCut(entityId));
     }
 
@@ -50,6 +56,17 @@ export class Game {
     }
 
     update(timestamp: number = performance.now()) {
+        if (this._lastFPSTime === 0) {
+            this._lastFPSTime = timestamp;
+        }
+
+        this._frameCount++;
+        if (timestamp - this._lastFPSTime >= 1000) {
+            this._fps = this._frameCount;
+            this._frameCount = 0;
+            this._lastFPSTime = timestamp;
+        }
+        
         if (timestamp - this._lastSpawnTime >= this._spawnInterval) {
             this.spawnFruit();
             this._lastSpawnTime = timestamp;
@@ -63,7 +80,7 @@ export class Game {
         
         this._collisionSystem.process(mousePoints, fingerPositions);
 
-        RenderSystem.process(this._ctx, this._world.entities, fingerPositions);
+        RenderSystem.process(this._ctx, this._world.entities, fingerPositions, this._fps);
     }
 
     private handleFruitCut(entityId: string): void {

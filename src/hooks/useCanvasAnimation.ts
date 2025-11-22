@@ -1,14 +1,26 @@
 import { useEffect, useRef } from "react";
 import { Game } from "../ecs/Game";
 
-export const useCanvasAnimation = (videoElement: HTMLVideoElement | null) => {
+export const useCanvasAnimation = (
+    videoRef: React.RefObject<HTMLVideoElement | null>,
+    width: number,
+    height: number
+) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animationRef = useRef<number | null>(null);
     const gameRef = useRef<Game | null>(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas || width === 0 || height === 0) return;
+
+        // Dispose of the old game instance if it exists
+        if (gameRef.current) {
+            gameRef.current.dispose();
+        }
+        if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+        }
 
         const handleMouseMove = (e: MouseEvent) => {
         const rect = canvas.getBoundingClientRect();
@@ -28,12 +40,14 @@ export const useCanvasAnimation = (videoElement: HTMLVideoElement | null) => {
         gameRef.current = game;
 
         // Initialize hand tracking when video element is available
+        const videoElement = videoRef.current;
         if (videoElement) {
             game.initializeHandTracking(videoElement).catch(console.error);
         }
 
         const gameLoop = (timestamp: number) => {
-            game.update(timestamp);
+            if (!gameRef.current) return;
+            gameRef.current.update(timestamp);
             animationRef.current = requestAnimationFrame(gameLoop);
         };
 
@@ -46,9 +60,10 @@ export const useCanvasAnimation = (videoElement: HTMLVideoElement | null) => {
         }
         if (gameRef.current) {
             gameRef.current.dispose();
+            gameRef.current = null;
         }
         };
-    }, [videoElement]);
+    }, [width, height, videoRef]);
 
     return {
         canvasRef,

@@ -1,12 +1,27 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useCanvasAnimation } from './hooks/useCanvasAnimation';
 import { useCamera } from './hooks/useCamera';
 import './FruitNinjaGame.css';
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from './config';
+import { useViewportSize } from './hooks/useViewportSize';
 
 export const FruitNinjaGame: React.FC = () => {
   const { videoRef, isLoading, error } = useCamera();
-  const { canvasRef } = useCanvasAnimation(videoRef.current);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const dimensions = useViewportSize(viewportRef);
+
+  const { canvasRef } = useCanvasAnimation(videoRef, dimensions.width, dimensions.height);
+
+  useEffect(() => {
+    const handlePinchClick = () => {
+      console.log('clicked');
+    };
+
+    window.addEventListener('pinchclick', handlePinchClick);
+
+    return () => {
+      window.removeEventListener('pinchclick', handlePinchClick);
+    };
+  }, []);
 
   return (
     <div className="game-container">
@@ -14,22 +29,22 @@ export const FruitNinjaGame: React.FC = () => {
       {error && <div className="error">{error}</div>}
       
       <div 
+        ref={viewportRef}
         className="game-viewport"
-        // style={{width: `${CANVAS_WIDTH}px`, height: `${480}px`}}
       >
         <video
           ref={videoRef}
           className="camera-feed"
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
+          width={"100vw"}
+          height={"100vh"}
           autoPlay
           muted
         />
         <canvas
           ref={canvasRef}
           className="game-canvas"
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
+          width={dimensions.width}
+          height={dimensions.height}
         />
       </div>
     </div>

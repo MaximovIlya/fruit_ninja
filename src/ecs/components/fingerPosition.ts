@@ -5,6 +5,13 @@ export type FingerPosition = Position & {
   id: string;
 };
 
+export type Edge = {
+  startIndex: number;
+  endIndex: number;
+  handIndex: number;
+}
+
 export type FingerPositions = {
   landmarks: FingerPosition[];
+  edges: Edge[];
 };
