@@ -1,4 +1,4 @@
-import type { World } from "../core/types";
+import { World } from "../core/World";
 
 export class DisposalSystem {
   constructor(

@@ -23,6 +23,7 @@
   height: 100%;
   object-fit: cover;
   z-index: 1;
+  transform: scaleX(-1); /* Flip camera horizontally to fix mirroring */
 }
 
 .game-canvas {

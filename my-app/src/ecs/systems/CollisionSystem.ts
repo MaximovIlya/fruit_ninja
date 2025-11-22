@@ -1,4 +1,5 @@
 import type { World } from "../core/types";
+import type { FingerPositions } from "../components/fingerPosition";
 
 type Point = { x: number; y: number };
 
@@ -8,7 +9,15 @@ export class CollisionSystem {
     private _onFruitCut?: (entityId: string) => void
   ) {}
   
-  process(points: Point[]): void {
+  process(points: Point[], fingerPositions?: FingerPositions): void {
+    // Combine mouse points with finger positions
+    const allPoints = [...points];
+    
+    if (fingerPositions) {
+      const visibleFingers = fingerPositions.landmarks.filter(finger => finger.visibility > 0.5);
+      allPoints.push(...visibleFingers);
+    }
+
     for (const entity of this._world.entities) {
       const pos = entity.components.position!;
       const size = entity.components.size!;
@@ -16,7 +25,7 @@ export class CollisionSystem {
 
       if (isCut.isCut) continue;
 
-      for (const point of points) {
+      for (const point of allPoints) {
         const dx = point.x - pos.x;
         const dy = point.y - pos.y;
         const distance = Math.sqrt(dx * dx + dy * dy);

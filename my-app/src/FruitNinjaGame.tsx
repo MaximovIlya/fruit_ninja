@@ -5,8 +5,8 @@ import './FruitNinjaGame.css';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from './config';
 
 export const FruitNinjaGame: React.FC = () => {
-  const { canvasRef } = useCanvasAnimation();
   const { videoRef, isLoading, error } = useCamera();
+  const { canvasRef } = useCanvasAnimation(videoRef.current);
 
   return (
     <div className="game-container">

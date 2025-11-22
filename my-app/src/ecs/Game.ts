@@ -7,6 +7,7 @@ import { DisposalSystem } from "./systems/DisposalSystem";
 import { MouseTrackSystem } from "./systems/MouseTrackSystem";
 import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
+import { HandTrackingSystem } from "./systems/HandTrackingSystem";
 
 export class Game {
     private _ctx: CanvasRenderingContext2D;
@@ -16,6 +17,7 @@ export class Game {
     private _fruitFactory: FruitFactory;
     private _disposalSystem: DisposalSystem;
     private _mouseTrackSystem: MouseTrackSystem;
+    private _handTrackingSystem: HandTrackingSystem;
     private _collisionSystem: CollisionSystem;
     private _lastSpawnTime: number = 0;
     private _spawnInterval: number = SPAWN_INTERVAL;
@@ -28,11 +30,16 @@ export class Game {
         this._fruitFactory = new FruitFactory(this._canvasWidth, this._canvasHeight);
         this._disposalSystem = new DisposalSystem(this._canvasHeight, this._world);
         this._mouseTrackSystem = new MouseTrackSystem()
+        this._handTrackingSystem = new HandTrackingSystem(this._canvasWidth, this._canvasHeight);
         this._collisionSystem = new CollisionSystem(this._world, (entityId) => this.handleFruitCut(entityId));
     }
 
     set mousePosition(mousePos: MousePosition) {
         this._mouseTrackSystem.mousePosition = mousePos;
+    }
+
+    async initializeHandTracking(videoElement: HTMLVideoElement): Promise<void> {
+        await this._handTrackingSystem.initializeCamera(videoElement);
     }
 
     spawnFruit() {
@@ -51,15 +58,19 @@ export class Game {
         MovementSystem.process(this._world);
         this._disposalSystem.process();
 
-        if (this._mouseTrackSystem.mousePosition) {
-            this._collisionSystem.process([this._mouseTrackSystem.mousePosition]);
-        }
+        const mousePoints = this._mouseTrackSystem.mousePosition ? [this._mouseTrackSystem.mousePosition] : [];
+        const fingerPositions = this._handTrackingSystem.fingerPositions;
+        
+        this._collisionSystem.process(mousePoints, fingerPositions);
 
-        RenderSystem.process(this._ctx, this._world.entities);
+        RenderSystem.process(this._ctx, this._world.entities, fingerPositions);
     }
 
     private handleFruitCut(entityId: string): void {
         this._disposalSystem.disposeById(entityId);
     }
 
+    dispose(): void {
+        this._handTrackingSystem.dispose();
+    }
 }

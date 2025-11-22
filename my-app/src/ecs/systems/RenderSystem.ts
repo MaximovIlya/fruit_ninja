@@ -1,10 +1,12 @@
-import type { Entity } from "../types";
+import type { FingerPositions } from "../components/fingerPosition";
+import type { Entity } from "../core/types";
 
 export class RenderSystem {
-  static process(ctx: CanvasRenderingContext2D, entities: Entity[]) {
+  static process(ctx: CanvasRenderingContext2D, entities: Entity[], fingerPositions?: FingerPositions) {
     // Clear with transparent background instead of solid color
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
+    // Draw fruits
     for (const entity of entities) {
       const pos = entity.components.position;
       const size = entity.components.size;
@@ -46,6 +48,23 @@ export class RenderSystem {
       ctx.lineWidth = 2;
       ctx.stroke();
 
+      ctx.restore();
+    }
+
+    // Draw finger positions as green markers
+    if (fingerPositions) {
+      ctx.save();
+      for (const finger of fingerPositions.landmarks) {
+        if (finger.visibility > 0.5) {
+          ctx.beginPath();
+          ctx.arc(finger.x, finger.y, 8, 0, Math.PI * 2);
+          ctx.fillStyle = "#00ff00";
+          ctx.fill();
+          ctx.strokeStyle = "#00aa00";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
       ctx.restore();
     }
   }
