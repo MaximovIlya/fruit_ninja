@@ -5,7 +5,8 @@ import { HandTrackingSystem } from "../ecs/systems/HandTrackingSystem";
 export const useGame = (
     handTrackingSystem: HandTrackingSystem | null,
     width: number,
-    height: number
+    height: number,
+    onScoreChange?: (score: number) => void
 ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const gameRef = useRef<Game | null>(null);
@@ -14,7 +15,7 @@ export const useGame = (
         const canvas = canvasRef.current;
         if (!canvas || width === 0 || height === 0) return;
 
-        const game = new Game(canvas, handTrackingSystem);
+        const game = new Game(canvas, handTrackingSystem, onScoreChange);
         game.loadAssets().catch(console.error);
         gameRef.current = game;
 
@@ -30,7 +31,7 @@ export const useGame = (
             game.dispose();
         };
 
-    }, [width, height, handTrackingSystem]);
+    }, [width, height, handTrackingSystem, onScoreChange]);
 
     return {
         canvasRef,

@@ -10,16 +10,36 @@ export class FruitFactory {
   }
 
   createFruit(): Entity {
+    const horizontalMargin = this._canvasWidth * 0.15;
+    const spawnWidth = this._canvasWidth - horizontalMargin * 2;
+    const launchX = horizontalMargin + Math.random() * spawnWidth;
+
+    const launchSpeedY = -(14 + Math.random() * 8);
+    const launchSpeedX = (Math.random() - 0.5) * 6;
+    
+    const fruitType = FRUIT_TYPES[Math.floor(Math.random() * FRUIT_TYPES.length)];
+    
+    // Разная гравитация для разных фруктов
+    const gravityForces: Record<string, number> = {
+      'apple': 0.5,
+      'orange': 0.45,
+      'banana': 0.4,
+      'watermelon': 0.6 // арбуз тяжелее - быстрее падает
+    };
+
     return {
       id: Math.random().toString(36).substr(2, 9),
       components: {
         position: {
-          x: Math.random() * this._canvasWidth,
-          y: this._canvasHeight + 50,
+          x: launchX,
+          y: this._canvasHeight + 60,
         },
         velocity: {
-          vx: (Math.random() - 0.5) * 10,
-          vy: -Math.random() * 10 - 15,
+          vx: launchSpeedX,
+          vy: launchSpeedY,
+        },
+        gravity: {
+          force: gravityForces[fruitType] || 0.5,
         },
         size: {
           radius: 30 + Math.random() * 20,
@@ -28,9 +48,7 @@ export class FruitFactory {
           isCut: false,
         },
         type: {
-          value: FRUIT_TYPES[
-            Math.floor(Math.random() * FRUIT_TYPES.length)
-          ],
+          value: fruitType,
         },
       },
     };

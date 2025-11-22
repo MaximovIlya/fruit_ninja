@@ -1,5 +1,6 @@
-import type { World } from "../core/types";
+
 import type { FingerPositions } from "../components/fingerPosition";
+import type { World } from "../core/World";
 
 type Point = { x: number; y: number };
 

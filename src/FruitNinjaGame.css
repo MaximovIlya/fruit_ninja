@@ -37,6 +37,21 @@
   background: transparent;
 }
 
+.score-display {
+  position: absolute;
+  top: 16px;
+  left: 24px;
+  z-index: 3;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
 .loading, .error {
   padding: 1rem;
   border-radius: 4px;
