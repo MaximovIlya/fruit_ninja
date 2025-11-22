@@ -1,54 +1,6 @@
-# React + TypeScript + Vite
+# Hand-Tracking Fruit Ninja: A MediaPipe + ECS Implementation in React
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## About the Project
 
-Currently, two official plugins are available:
+This project is a webcam-driven reimplementation of the classic Fruit Ninja game that combines MediaPipe Hands-based gesture recognition with a custom Entity Component System (ECS) architecture built in TypeScript and React. Players interact with the game using natural hand gestures captured through their webcam—specifically, pinch gestures between thumb and index finger—to slice flying fruits while avoiding bombs. The system eliminates the need for traditional input devices like mice or keyboards, providing an immersive, touchless gaming experience. The implementation features real-time hand tracking at 45-60 FPS, adaptive difficulty scaling over a two-minute progression curve, physics-based fruit trajectories with type-specific gravity, and a modular ECS design that separates movement, collision detection, rendering, and disposal systems. Built entirely with modern web technologies (React 19, Vite, HTML5 Canvas, MediaPipe), the game demonstrates how commodity computer-vision pipelines can be integrated into browser-based applications to create natural user interfaces without requiring specialized hardware beyond a standard webcam.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
