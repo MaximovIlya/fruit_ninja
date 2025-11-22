@@ -1,4 +1,4 @@
-import type { Entity } from "../types";
+import type { Entity } from "../ecs/core/types";
 
 export class FruitFactory {
   constructor(

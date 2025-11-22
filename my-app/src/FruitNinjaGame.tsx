@@ -10,6 +10,19 @@ export const FruitNinjaGame: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const newMousePos = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+      if (gameRef.current) {
+        gameRef.current.setMousePosition(newMousePos);
+      }
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+
     const game = new Game(canvas);
     game.spawnFruit();
     gameRef.current = game;
@@ -22,6 +35,7 @@ export const FruitNinjaGame: React.FC = () => {
     animationRef.current = requestAnimationFrame(gameLoop);
 
     return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -30,12 +44,11 @@ export const FruitNinjaGame: React.FC = () => {
 
   return (
     <div>
-      <h1>Fruit Ninja ECS</h1>
       <canvas
         ref={canvasRef}
         width={640}
         height={480}
-        style={{ border: '1px solid black' }}
+        style={{ border: '1px solid black', cursor: 'crosshair' }}
       />
     </div>
   );

@@ -1,10 +1,3 @@
-export type Component = Record<string, any>; //TODO: create type for component properties
+import type { Position } from "./components/position";
 
-export type Entity = {
-  id: string;
-  components: Record<string, Component>;
-};
-
-export type World = {
-  entities: Entity[];
-};
+export type MousePosition = Position | null;
