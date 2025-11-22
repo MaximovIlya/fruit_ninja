@@ -8,7 +8,6 @@ import { MouseTrackSystem } from "./systems/MouseTrackSystem";
 import { MovementSystem } from "./systems/MovementSystem";
 import { RenderSystem } from "./systems/RenderSystem";
 import { HandTrackingSystem } from "./systems/HandTrackingSystem";
-import { PinchClickStrategy } from './systems/gestures/PinchClickStrategy';
 import { wall } from "../assets";
 
 
@@ -21,7 +20,7 @@ export class Game {
     private _fruitFactory: FruitFactory;
     private _disposalSystem: DisposalSystem;
     private _mouseTrackSystem: MouseTrackSystem;
-    private _handTrackingSystem: HandTrackingSystem;
+    private _handTrackingSystem: HandTrackingSystem | null;
     private _collisionSystem: CollisionSystem;
     private _lastSpawnTime: number = 0;
     private _spawnInterval: number = SPAWN_INTERVAL;
@@ -29,8 +28,9 @@ export class Game {
     private _lastFPSTime: number = 0;
     private _fps: number = 0;
     private _wallImage: HTMLImageElement | null = null;
+    private _isPlaying = false;
 
-    constructor(canvas: HTMLCanvasElement) {
+    constructor(canvas: HTMLCanvasElement, handTrackingSystem: HandTrackingSystem | null = null) {
         this._canvas = canvas;
         this._ctx = this._canvas.getContext('2d')!;
         this._canvasWidth = canvas.width;
@@ -39,8 +39,12 @@ export class Game {
         this._fruitFactory = new FruitFactory(this._canvasWidth, this._canvasHeight);
         this._disposalSystem = new DisposalSystem(this._canvasHeight, this._world);
         this._mouseTrackSystem = new MouseTrackSystem()
-        this._handTrackingSystem = new HandTrackingSystem(this._canvasWidth, this._canvasHeight, [new PinchClickStrategy()]);
+        this._handTrackingSystem = handTrackingSystem;
         this._collisionSystem = new CollisionSystem(this._world, (entityId) => this.handleFruitCut(entityId));
+    }
+
+    startGame(): void {
+        this._isPlaying = true;
     }
 
     set mousePosition(mousePos: MousePosition) {
@@ -48,7 +52,9 @@ export class Game {
     }
 
     async initializeHandTracking(videoElement: HTMLVideoElement): Promise<void> {
-        await this._handTrackingSystem.initializeCamera(videoElement);
+        if (this._handTrackingSystem) {
+            await this._handTrackingSystem.initializeCamera(videoElement);
+        }
     }
 
     async loadAssets(): Promise<void> {
@@ -76,20 +82,25 @@ export class Game {
             this._lastFPSTime = timestamp;
         }
         
-        if (timestamp - this._lastSpawnTime >= this._spawnInterval) {
-            this.spawnFruit();
-            this._lastSpawnTime = timestamp;
+        if (this._isPlaying) {
+            if (timestamp - this._lastSpawnTime >= this._spawnInterval) {
+                this.spawnFruit();
+                this._lastSpawnTime = timestamp;
+            }
+    
+            MovementSystem.process(this._world);
+            this._disposalSystem.process();
+    
+            const mousePoints = this._mouseTrackSystem.mousePosition ? [this._mouseTrackSystem.mousePosition] : [];
+            const fingerPositions = this._handTrackingSystem ? this._handTrackingSystem.fingerPositions : { landmarks: [], edges: [] };
+            
+            this._collisionSystem.process(mousePoints, fingerPositions);
+
+            RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem?.videoElement ?? null, this._wallImage, fingerPositions, this._fps);
+        } else {
+            const fingerPositions = this._handTrackingSystem ? this._handTrackingSystem.fingerPositions : { landmarks: [], edges: [] };
+            RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem?.videoElement ?? null, this._wallImage, fingerPositions, this._fps);
         }
-
-        MovementSystem.process(this._world);
-        this._disposalSystem.process();
-
-        const mousePoints = this._mouseTrackSystem.mousePosition ? [this._mouseTrackSystem.mousePosition] : [];
-        const fingerPositions = this._handTrackingSystem.fingerPositions;
-        
-        this._collisionSystem.process(mousePoints, fingerPositions);
-
-        RenderSystem.process(this._ctx, this._world.entities, this._handTrackingSystem.videoElement, this._wallImage, fingerPositions, this._fps);
     }
 
     private handleFruitCut(entityId: string): void {
@@ -97,6 +108,8 @@ export class Game {
     }
 
     dispose(): void {
-        this._handTrackingSystem.dispose();
+        if (this._handTrackingSystem) {
+            this._handTrackingSystem.dispose();
+        }
     }
 }

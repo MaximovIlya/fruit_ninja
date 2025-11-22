@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export const useViewportSize = <T extends HTMLElement>(ref: React.RefObject<T>) => {
+export const useViewportSize = <T extends HTMLElement>(ref: React.RefObject<T | null>) => {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {

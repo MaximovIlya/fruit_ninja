@@ -1,0 +1,29 @@
+.menu {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 2rem;
+  border-radius: 1rem;
+  z-index: 2;
+}
+
+.menu h1 {
+  font-size: 3rem;
+  margin-bottom: 2rem;
+}
+
+.menu button {
+  width: 400px;
+  height: 100px;
+  font-size: 3rem;
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+} 

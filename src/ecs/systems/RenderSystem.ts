@@ -10,7 +10,7 @@ export class RenderSystem {
         ctx.save();
         ctx.scale(-1, 1);
         ctx.translate(-ctx.canvas.width, 0);
-        ctx.globalAlpha = 0.3;
+        ctx.globalAlpha = 1;
         ctx.drawImage(videoElement, 0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.restore();
     }

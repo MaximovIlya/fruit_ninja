@@ -17,8 +17,11 @@ export class PinchClickStrategy implements GestureStrategy {
 
       if (distance < this.PINCH_THRESHOLD) {
         if (!this.isPinched) {
+          console.log('pinch');
           this.isPinched = true;
-          window.dispatchEvent(new CustomEvent('pinchclick'));
+          const pinchX = ((thumbTip.x + indexTip.x) / 2) * canvasWidth;
+          const pinchY = ((thumbTip.y + indexTip.y) / 2) * canvasHeight;
+          window.dispatchEvent(new CustomEvent('pinch', { detail: { x: pinchX, y: pinchY } }));
         }
       } else {
         this.isPinched = false;
