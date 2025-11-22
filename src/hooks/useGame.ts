@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect } from "react";
 import { Game } from "../ecs/Game";
 import { HandTrackingSystem } from "../ecs/systems/HandTrackingSystem";
 

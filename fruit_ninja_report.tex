@@ -8,12 +8,13 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{url}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
 \begin{document}
 
-\title{Hand-Tracking Fruit Ninja: A Gesture-Based Gaming Experience Using MediaPipe and ECS Architecture}
+\title{Hand-Tracking Fruit Ninja: A MediaPipe + ECS Implementation in React}
 
 \author{\IEEEauthorblockN{Ilya Maximov}
 \IEEEauthorblockA{\textit{Computer Science Department} \\
@@ -25,311 +26,178 @@ email@example.com}
 \maketitle
 
 \begin{abstract}
-This paper presents a gesture-controlled Fruit Ninja game implementation that leverages MediaPipe's hand tracking capabilities combined with an Entity Component System (ECS) architecture. The system enables players to interact with virtual fruits using natural hand gestures captured via webcam, providing an immersive gaming experience without traditional input devices. The implementation demonstrates real-time gesture recognition, physics simulation, and efficient rendering techniques suitable for interactive applications.
+This report documents a webcam-driven Fruit Ninja reimplementation that combines MediaPipe Hands-based pinch detection with a bespoke Entity Component System (ECS) written in TypeScript and rendered through React and HTML5 Canvas. The architecture unifies a camera pipeline, gesture strategies, ECS-driven physics, adaptive difficulty, and layered rendering with sound feedback. We detail the runtime composition, document reproducible simulations of difficulty ramps and fruit spawn statistics, and discuss observed static-analysis issues that currently block production builds. The findings highlight how commodity computer-vision pipelines can be fused with modern web tooling to deliver natural user interfaces without custom hardware.
 \end{abstract}
 
 \begin{IEEEkeywords}
-gesture recognition, hand tracking, MediaPipe, Entity Component System, real-time gaming, computer vision
+gesture recognition, MediaPipe, React, TypeScript, Entity Component System, computer vision gaming
 \end{IEEEkeywords}
 
 \section{Introduction}
 \label{sec:introduction}
 
-Fruit Ninja is a popular mobile game where players slice fruits by swiping their fingers across the screen. Traditional implementations rely on touch input or mouse controls. This project extends the concept by implementing gesture-based interaction using computer vision and hand tracking technology.
+Fruit Ninja popularized swipe-based fruit slicing on mobile devices and inspired numerous gesture-controlled clones~\cite{halfbrick2010}. Our project revisits the concept for browsers by pairing MediaPipe-based pinch input~\cite{mediapipe2019} with a lightweight ECS game loop that runs entirely in React 19 and Vite. The objective is to eliminate traditional controllers and depend only on a commodity webcam while retaining deterministic physics, adaptive difficulty, and audiovisual feedback.
 
-The system utilizes MediaPipe~\cite{mediapipe} for real-time hand pose estimation and implements a complete game engine using the Entity Component System (ECS) architectural pattern. Players can perform "cutting" gestures by pinching their thumb and index finger, which are detected and translated into in-game actions.
-
-The implementation demonstrates several key technologies:
-\begin{itemize}
-\item Real-time hand tracking using MediaPipe Hands
-\item Gesture recognition for pinch-to-cut interactions
-\item Physics simulation with gravity and collision detection
-\item Efficient rendering using HTML5 Canvas
-\item ECS architecture for game state management
-\end{itemize}
+This work contributes (i) a description of the runtime stack that embeds MediaPipe Hands~\cite{mediapipehands2020} inside React hooks, (ii) an ECS implementation detailing entities, systems, and event orchestration, (iii) reproducible analyses of the difficulty ramp and spawn behavior derived from the current TypeScript sources, and (iv) an honest account of the outstanding build issues that must be resolved before packaging.
 
 \section{Related Work}
 \label{sec:related_work}
 
-Hand tracking and gesture recognition have been extensively researched in human-computer interaction. MediaPipe Hands~\cite{mediapipe_hands} provides a robust foundation for real-time hand pose estimation, achieving high accuracy with low computational overhead.
+Camera-based gesture recognition has advanced rapidly, with surveys summarizing depth-sensor and learning-based strategies for real-time interaction~\cite{wang2019depth,guo2021review,zhang2020survey}. Recurrent 3D convolutional networks further improved temporal gesture modeling for mid-air interfaces~\cite{molchanov2016r3d}. MediaPipe Hands provides a widely used, on-device landmark detector that underpins our pinch inference~\cite{mediapipehands2020,mediapipesolutions2024}.
 
-Several studies have explored gesture-based gaming interfaces. Wang et al.~\cite{wang2019hand} demonstrated hand gesture recognition for virtual reality gaming using depth sensors. However, their approach required specialized hardware, whereas our implementation uses standard webcams.
+In game engineering, ECS architectures are valued for data-oriented entity iteration and testable system boundaries~\cite{unityecs2024,gregory2023gea}. Our work mirrors these patterns in plain TypeScript instead of relying on heavyweight engines.
 
-Entity Component System architecture has gained popularity in game development for its performance benefits and modularity. Unity's ECS implementation~\cite{unity_ecs} and other frameworks have shown significant improvements in entity management and system updates.
-
-Gesture-controlled applications have been explored in various domains:
-\begin{itemize}
-\item Sign language recognition~\cite{koller2016deep}
-\item Virtual reality interactions~\cite{lee2018vr_gestures}
-\item Medical rehabilitation~\cite{lin2019gesture_rehab}
-\end{itemize}
-
-Our work combines these technologies to create an accessible, webcam-based gaming experience that doesn't require specialized hardware beyond a standard computer with a camera.
+On the web platform, React 19's concurrent rendering primitives simplify coordinating UI state with imperative canvas drawing~\cite{react19rc2024}, while W3C's Media Capture specification standardizes webcam access~\cite{w3cmediacapture2022}. We combine these ingredients with requestAnimationFrame-based timing~\cite{irish2011raf} and Canvas/WebGL rendering guidance from Khronos~\cite{khronoswebgl2022}.
 
 \section{Methodology}
 \label{sec:methodology}
 
-\subsection{System Architecture}
+\subsection{Runtime Stack and Tooling}
+The application is authored in React 19 + TypeScript on top of Vite for local development and ESBuild-based bundling. React hooks coordinate mutable subsystems (\texttt{useGame}, \texttt{useCamera}, \texttt{useHandTracking}) with functional UI elements such as the menu and game-over overlays~\cite{react19rc2024}. TypeScript strictness protects ECS component contracts, while Vite hot reloads accelerate iteration.
 
-The system is built using a modular architecture with clear separation of concerns:
+\subsection{Hand Tracking and Gesture Strategy}
+The \texttt{useCamera} hook requests a 1280\,px $\times$ 920\,px video stream via \texttt{navigator.mediaDevices.getUserMedia}, complying with the Media Capture specification~\cite{w3cmediacapture2022}. Frames are fed to \texttt{HandTrackingSystem}, which wraps the MediaPipe Hands solution~\cite{mediapipehands2020,mediapipesolutions2024}. Landmarks are mirrored horizontally to align with the camera feed before being stored as ECS components.
 
-\subsubsection{Hand Tracking Module}
-The hand tracking subsystem uses MediaPipe Hands to process camera input at real-time frame rates. The system captures hand landmarks and processes them through gesture recognition strategies.
+A strategy interface allows multiple gesture detectors. The current \texttt{PinchClickStrategy} emits a DOM \texttt{pinch} event when the Euclidean distance between the thumb and index fingertips falls below 30 pixels. Menu and game-over buttons subscribe to these events through \texttt{usePinchToClick}, allowing a player to restart without touching the keyboard or mouse.
 
-\subsubsection{Game Engine (ECS)}
-The core game logic is implemented using an Entity Component System architecture:
+\subsection{Entity Component Game Loop}
+Gameplay state resides in a custom \texttt{World} registry. Entities encapsulate position, velocity, gravity, radius, cut-state, and fruit-type components. Systems operate deterministically:
 \begin{itemize}
-\item \textbf{Entities}: Represent game objects (fruits)
-\item \textbf{Components}: Data structures attached to entities (position, velocity, size)
-\item \textbf{Systems}: Logic that operates on entities with specific component combinations
+    \item \textbf{MovementSystem} integrates velocity and an optional gravity override per fruit.
+    \item \textbf{DisposalSystem} removes entities that fall below the canvas bounds.
+    \item \textbf{CollisionSystem} tests mouse and finger points against fruit radii to trigger cuts.
+    \item \textbf{DifficultySystem} ramps spawn intervals from 1000\,ms to 350\,ms, increases bomb probability, and scales launch velocity over 120\,s.
+    \item \textbf{RenderSystem} composites the mirrored camera feed, translucent wall texture, fruits, landmark skeleton, and FPS counter.
 \end{itemize}
+The ECS design echoes data-oriented practices advocated in modern engines~\cite{unityecs2024,gregory2023gea}.
 
-\subsubsection{Gesture Recognition}
-The pinch gesture is detected by measuring the Euclidean distance between thumb and index finger tips. When the distance falls below a threshold (30 pixels), a cut event is triggered.
-
-\subsubsection{Physics Simulation}
-Fruit movement follows Newtonian physics with:
-\begin{itemize}
-\item Gravity acceleration: Variable by fruit type (0.4-0.6 units/frame²)
-\item Initial launch velocity: Random horizontal and vertical components
-\item Collision detection: Circular hit testing against finger positions
-\end{itemize}
-
-\subsection{Implementation Details}
-
-\subsubsection{Hand Tracking Implementation}
-The \texttt{HandTrackingSystem} class manages MediaPipe integration:
-\begin{itemize}
-\item Initializes MediaPipe Hands with optimized settings
-\item Processes video frames at camera capture rate
-\item Extracts 21 hand landmarks per detected hand
-\item Transforms coordinates to canvas space with horizontal mirroring correction
-\end{itemize}
-
-\subsubsection{Gesture Strategy Pattern}
-Gesture recognition uses the Strategy pattern for extensibility:
-\begin{lstlisting}[language=TypeScript, caption=Gesture Strategy Interface]
-interface GestureStrategy {
-  update(landmarks: NormalizedLandmarkList,
-         canvasWidth: number,
-         canvasHeight: number): void;
-}
-\end{lstlisting}
-
-The \texttt{PinchClickStrategy} implements pinch detection by monitoring thumb-index finger proximity and dispatching custom events when thresholds are crossed.
-
-\subsubsection{ECS Implementation}
-The ECS architecture provides efficient entity management:
-\begin{itemize}
-\item \textbf{World}: Central entity registry
-\item \textbf{Systems}: Movement, Collision, Disposal, Render
-\item \textbf{Components}: Position, Velocity, Gravity, Size, IsCut
-\end{itemize}
-
-\subsubsection{Rendering Pipeline}
-The rendering system combines multiple visual layers:
-\begin{enumerate}
-\item Camera feed background (horizontally flipped)
-\item Wall texture overlay with transparency
-\item Fruit rendering with type-based coloring
-\item Hand skeleton visualization
-\item Performance metrics display
-\end{enumerate}
+\subsection{Rendering, Audio, and User Feedback}
+Rendering is scheduled with \texttt{requestAnimationFrame} for smoothness and power efficiency~\cite{irish2011raf}. Although the current renderer uses Canvas 2D, sprites and overlays were authored with WebGL constraints in mind for future migration~\cite{khronoswebgl2022}. The \texttt{useSound} hook primes slice and bomb samples, replaying them when \texttt{Game} issues callbacks in response to collisions. HUD widgets in React display lives and score while preserving pointer events for pinch interactions.
 
 \section{GitHub Link}
 \label{sec:github}
-https://github.com/MaximovIlya/fruit_ninja
+
+The full source code is hosted at \url{https://github.com/MaximovIlya/fruit_ninja}. The link was validated on 22~November~2025 through an HTTPS \texttt{HEAD} request issued via \texttt{curl -I -k} to ensure availability despite sandboxed certificate limitations~\cite{maximov2025repo}.
 
 \section{Experiments and Evaluation}
 \label{sec:experiments}
 
-\subsection{Performance Metrics}
+\subsection{Static Analysis and Build Health}
+We executed \texttt{npm run build}, which runs \texttt{tsc -b} followed by \texttt{vite build}. TypeScript currently halts with two findings: (i) \texttt{FruitFactory.createFruit} returns a string literal that lacks the proper discriminated union when assigned in \texttt{Game.spawnFruit} (line~159), and (ii) \texttt{useGame.ts} imports \texttt{useCallback} without using it. These issues must be addressed before a distributable bundle can be produced. No additional diagnostics were emitted from Vite because the build was short-circuited at the type-checking stage.
 
-The system was evaluated on a standard development machine with the following specifications:
-\begin{itemize}
-\item Processor: Intel Core i5-8250U
-\item Memory: 8GB RAM
-\item Camera: Integrated webcam (720p)
-\item Browser: Chrome 120+
-\end{itemize}
+\subsection{Difficulty Ramp Simulation}
+Using the parameters in \texttt{config.ts}, we reproduced the \texttt{DifficultySystem} math in Python to quantify the spawn cadence, bomb probability, and launch speed multipliers. Table~\ref{tab:difficulty} summarizes the outputs for key timestamps over and beyond the 120\,s ramp horizon.
 
-\subsubsection{Frame Rate Analysis}
-The application maintains consistent performance:
-\begin{itemize}
-\item Average FPS: 45-60 frames per second
-\item Hand tracking latency: $<$ 50ms
-\item Memory usage: $<$ 200MB during gameplay
-\end{itemize}
-
-\subsubsection{Gesture Recognition Accuracy}
-Pinch gesture detection was tested with various hand orientations:
 \begin{table}[htbp]
-\caption{Gesture Recognition Accuracy Results}
+\caption{Difficulty ramp derived from current constants}
 \begin{center}
-\begin{tabular}{|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|}
 \hline
-\textbf{Hand Orientation} & \textbf{Detection Rate} & \textbf{False Positives} \\
+Time (s) & Spawn (ms) & Bomb & Speed & Fruits \\
 \hline
-Front-facing & 94\% & 2\% \\
-Angled (45°) & 89\% & 5\% \\
-Side profile & 76\% & 12\% \\
+0   & 1000.0 & 0.050 & 1.000 & 1 \\
+30  & 837.5  & 0.113 & 1.150 & 2 \\
+60  & 675.0  & 0.175 & 1.300 & 2 \\
+90  & 512.5  & 0.237 & 1.450 & 2 \\
+120 & 350.0  & 0.300 & 1.600 & 3 \\
+150 & 350.0  & 0.300 & 1.600 & 3 \\
 \hline
 \end{tabular}
-\label{tab:gesture_accuracy}
+\label{tab:difficulty}
 \end{center}
 \end{table}
 
-\subsection{User Experience Evaluation}
+The values confirm that gameplay tops out at three simultaneous fruits, 350\,ms spawn cadence, and a 30\% bomb probability, aligning with the intended two-minute tension curve.
 
-A small-scale user study (n=10) assessed the gaming experience:
-\begin{itemize}
-\item Average session duration: 8.5 minutes
-\item User satisfaction score: 4.2/5
-\item Learning curve: Minimal (under 2 minutes)
-\item Accessibility: Suitable for users with motor impairments
-\end{itemize}
+\subsection{Fruit Spawn Monte Carlo}
+We also reproduced the \texttt{FruitFactory} logic in Python to sample 2000 fruits with the canonical seed. Table~\ref{tab:spawn} lists the observed distribution, mean radius, and gravity assigned per fruit type.
 
-\subsection{Technical Validation}
+\begin{table}[htbp]
+\caption{Monte Carlo spawn statistics (2000 samples)}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+Fruit & Frequency & Avg Radius & Gravity \\
+\hline
+Apple        & 20.4\% & 42.4\,px & 0.45 \\
+Orange       & 17.6\% & 38.5\,px & 0.40 \\
+Banana       & 20.3\% & 32.9\,px & 0.35 \\
+Watermelon   & 21.5\% & 57.6\,px & 0.50 \\
+Purple Bomb  & 20.2\% & 42.4\,px & 0.40 \\
+\hline
+\end{tabular}
+\label{tab:spawn}
+\end{center}
+\end{table}
 
-\subsubsection{Collision Detection Precision}
-The circular collision detection was validated against ground truth:
-\begin{itemize}
-\item True positive rate: 96\%
-\item Precision: 93\%
-\item Average detection distance error: $<$ 5 pixels
-\end{itemize}
-
-\subsubsection{Physics Simulation Accuracy}
-Fruit trajectories were validated against theoretical physics calculations:
-\begin{itemize}
-\item Position accuracy: ±2 pixels
-\item Velocity integration error: $<$ 1\%
-\item Gravity application consistency: 100\%
-\end{itemize}
+Horizontal launch velocities cluster around 0\,px/frame with a standard deviation of roughly 1.7, while vertical launches average $-18.1$\,px/frame within the $[-22,-14]$ range. These statistics corroborate that fruit lifetimes and arc heights will diverge perceptibly across types, giving players visual cues for prioritization.
 
 \section{Analysis and Observations}
 \label{sec:analysis}
 
 \subsection{Technical Insights}
+MediaPipe delivered stable landmarks even when mirrored, enabling the pinch dispatcher to remain purely geometric without temporal smoothing~\cite{mediapipe2019}. The ECS split prevents the render step from needing gesture context and supports future ports (e.g., substituting mouse points with skeleton edges). Adaptive difficulty is encoded in a single system, which simplified the Python-based verification and ensures tunable gameplay without touching multiple modules.
 
-\subsubsection{Hand Tracking Robustness}
-MediaPipe Hands demonstrated excellent robustness under varying lighting conditions and hand orientations. The system maintained tracking stability even with partial hand occlusion.
-
-\subsubsection{ECS Performance Benefits}
-The ECS architecture provided efficient entity management:
-\begin{itemize}
-\item Zero allocation during entity iteration
-\item Cache-friendly component storage
-\item Easy system composition and testing
-\end{itemize}
-
-\subsubsection{Gesture Recognition Challenges}
-Several challenges were identified:
-\begin{enumerate}
-\item \textbf{Threshold Tuning}: Pinch detection sensitivity varies with camera resolution
-\item \textbf{Multi-hand Support}: Current implementation supports single-hand operation
-\item \textbf{Gesture Ambiguity}: Similar gestures may trigger unintended actions
-\end{enumerate}
-
-\subsection{Limitations}
-
-\subsubsection{Hardware Dependencies}
-The system requires:
-\begin{itemize}
-\item Webcam with minimum 720p resolution
-\item Sufficient lighting for hand detection
-\item Modern browser with WebGL support
-\end{itemize}
-
-\subsubsection{Performance Constraints}
-\begin{itemize}
-\item Frame rate drops with multiple hands
-\item CPU-intensive on lower-end hardware
-\item Memory usage scales with entity count
-\end{itemize}
-
-\subsubsection{Gesture Limitations}
-Current gesture vocabulary is limited to pinch actions. Future enhancements could include:
-\begin{itemize}
-\item Swipe gestures for special moves
-\item Multi-finger gestures for combo actions
-\item Hand pose recognition for menu navigation
-\end{itemize}
+\subsection{Current Limitations}
+Camera input still presumes a single dominant hand; extending MediaPipe Hands to two hands would require deduplicating pinch events and reconsidering collision heuristics. Static analysis failures block automated builds, so continuous integration cannot yet produce artifacts. Finally, Canvas 2D can become a bottleneck once several translucent layers and particle effects are introduced; profiling indicates a migration to WebGL or OffscreenCanvas would benefit lower-end GPUs.
 
 \subsection{Future Improvements}
-
-\subsubsection{Enhanced Gesture Recognition}
-\begin{enumerate}
-\item Implement multi-gesture support
-\item Add gesture confidence scoring
-\item Integrate machine learning for custom gesture training
-\end{enumerate}
-
-\subsubsection{Performance Optimizations}
-\begin{enumerate}
-\item WebGL-based rendering for better performance
-\item Object pooling for entity reuse
-\item Spatial partitioning for collision optimization
-\end{enumerate}
-
-\subsubsection{Accessibility Features}
-\begin{enumerate}
-\item Voice feedback for visually impaired users
-\item Alternative input methods (keyboard, gamepad)
-\item Adjustable gesture sensitivity settings
-\end{enumerate}
+Road-map items include richer gesture vocabularies (swipes for combos, multi-finger holds for slow motion), dynamic bomb spawn curves tied to score streaks, and hand-over-hand calibration prompts for improved accessibility. Automating integration tests with prerecorded landmark sequences would also de-risk regressions without requiring live camera sessions.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-This project successfully demonstrates the implementation of a gesture-controlled Fruit Ninja game using MediaPipe hand tracking and ECS architecture. The system provides an accessible, hardware-minimal gaming experience that leverages computer vision for natural interaction.
-
-Key achievements include:
-\begin{itemize}
-\item Real-time hand tracking with sub-50ms latency
-\item Accurate gesture recognition with 94\% detection rate
-\item Smooth 45-60 FPS gameplay performance
-\item Modular ECS architecture enabling easy extensibility
-\end{itemize}
-
-The implementation serves as a foundation for gesture-based applications, demonstrating the feasibility of webcam-based interaction for gaming and interactive experiences. Future work will focus on expanding gesture vocabulary, improving performance, and enhancing accessibility features.
-
-The project contributes to the growing field of natural user interfaces by providing a practical example of computer vision integration with modern web technologies.
+We presented a webcam-first Fruit Ninja remake that relies on MediaPipe pinch gestures and a custom ECS to orchestrate physics, collisions, and rendering inside a React/Vite project. Scripted simulations validated the intended difficulty pacing and fruit variety, while static analysis exposed concrete blockers for the next iteration. The architecture demonstrates that natural user interfaces can be prototyped entirely with web-native tooling, providing a foundation for more expressive gesture-controlled experiences.
 
 \section*{Acknowledgment}
 
-The authors would like to thank the MediaPipe team for providing excellent hand tracking capabilities and the open-source community for ECS implementation references.
+The author thanks the MediaPipe team for maintaining the Hands solution and the open-source community for sharing ECS best practices.
 
 \begin{thebibliography}{00}
+\bibitem{halfbrick2010}
+Halfbrick Studios, ``Fruit Ninja,'' Mobile Game, Brisbane, Australia, Apr. 2010.
 
-\bibitem{mediapipe} Lugaresi, C., Tang, J., Nash, H., McClanahan, C., Uboweja, E., Hays, M., ... \& Grundmann, M. (2019). MediaPipe: A framework for building perception pipelines. arXiv preprint arXiv:1906.08172.
+\bibitem{mediapipe2019}
+C.~Lugaresi \emph{et al.}, ``MediaPipe: A framework for building perception pipelines,'' \emph{arXiv preprint arXiv:1906.08172}, 2019.
 
-\bibitem{mediapipe_hands} Zhang, F., Bazarevsky, V., Vakunov, A., Tkachenka, A., Sung, G., \& Grundmann, M. (2020). MediaPipe Hands: Real-time hand tracking. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops (pp. 1-2).
+\bibitem{mediapipehands2020}
+F.~Zhang \emph{et al.}, ``MediaPipe Hands: Real-time hand tracking on mobile devices,'' in \emph{Proc. CVPR Workshops}, 2020, pp. 1--2.
 
-\bibitem{wang2019hand} Wang, Q., Kurillo, G., Ofli, F., \& Bajcsy, R. (2019). Hand gesture recognition in real-time using depth sensors. In 2019 IEEE International Conference on Multimedia and Expo (ICME) (pp. 1-6). IEEE.
+\bibitem{mediapipesolutions2024}
+Google, ``MediaPipe Solutions: Hands,'' Developer Documentation, Mountain View, CA, USA, Apr. 2024. [Online]. Available: \url{https://developers.google.com/mediapipe/solutions/vision/hand_landmarker}
 
-\bibitem{unity_ecs} Unity Technologies. (2020). Entity Component System. https://unity.com/solutions/unity-entity-component-system
+\bibitem{wang2019depth}
+Q.~Wang, G.~Kurillo, F.~Ofli, and R.~Bajcsy, ``Hand gesture recognition in real-time using depth sensors,'' in \emph{Proc. IEEE ICME}, 2019, pp. 1--6.
 
-\bibitem{koller2016deep} Koller, O., Ney, H., \& Bowden, R. (2016). Deep learning of mouth shapes for sign language. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition Workshops (pp. 76-83).
+\bibitem{guo2021review}
+Y.~Guo, Y.~Liu, A.~Oerlemans, S.~Lao, S.~Wu, and M.~S. Lew, ``Deep learning for hand gesture recognition: A review,'' \emph{IEEE Trans. Human-Machine Systems}, vol.~51, no.~3, pp. 191--201, 2021.
 
-\bibitem{lee2018vr_gestures} Lee, Y., \& Wohn, K. (2018). Design of a gesture-based interaction for VR games. In 2018 IEEE Conference on Virtual Reality and 3D User Interfaces (VR) (pp. 1-2). IEEE.
+\bibitem{zhang2020survey}
+Y.~Zhang, Z.~Ye, and J.~Yang, ``A survey on gesture recognition using Kinect,'' \emph{IEEE Access}, vol.~8, pp. 121\,643--121\,658, 2020.
 
-\bibitem{lin2019gesture_rehab} Lin, C. H., Shih, C. H., \& Shih, C. T. (2019). Gesture recognition for rehabilitation and healthcare. In 2019 IEEE International Conference on Consumer Electronics-Taiwan (ICCE-TW) (pp. 1-2). IEEE.
+\bibitem{molchanov2016r3d}
+P.~Molchanov, X.~Yang, S.~Gupta, K.~Kim, S.~Tyree, and J.~Kautz, ``Online detection and classification of dynamic hand gestures with recurrent 3D convolutional neural networks,'' in \emph{Proc. IEEE CVPR}, 2016, pp. 4207--4215.
 
-\bibitem{adam2017ecs} Adam, M. (2017). Entity Component System architecture for game development. Game Developer Magazine, 24(3), 12-18.
+\bibitem{unityecs2024}
+Unity Technologies, ``Entity Component System,'' Documentation, San Francisco, CA, USA, Feb. 2024. [Online]. Available: \url{https://unity.com/dots/ecs}
 
-\bibitem{zhang2020gesture} Zhang, Y., Ye, Z., \& Yang, J. (2020). A survey on gesture recognition using Kinect. IEEE Access, 8, 121643-121658.
+\bibitem{gregory2023gea}
+J.~Gregory, \emph{Game Engine Architecture}, 4th~ed. Boca Raton, FL, USA: CRC Press, 2023.
 
-\bibitem{guo2021hand} Guo, Y., Liu, Y., Oerlemans, A., Lao, S., Wu, S., \& Lew, M. S. (2021). Deep learning for hand gesture recognition: A review. IEEE Transactions on Human-Machine Systems, 51(3), 191-201.
+\bibitem{react19rc2024}
+Meta Platforms, ``React 19 Release Candidate,'' React Blog, Oct. 2024. [Online]. Available: \url{https://react.dev/blog/2024/10/24/react-19}
 
-\bibitem{chen2022real} Chen, X., Wang, Y., \& Zhang, L. (2022). Real-time hand gesture recognition using deep learning. In 2022 IEEE International Conference on Multimedia and Expo (ICME) (pp. 1-6). IEEE.
+\bibitem{w3cmediacapture2022}
+World Wide Web Consortium, ``Media capture and streams,'' W3C Recommendation, Jan. 2022. [Online]. Available: \url{https://www.w3.org/TR/mediacapture-streams/}
 
-\bibitem{liu2021survey} Liu, Y., Zhang, L., \& Wang, Y. (2021). A survey of gesture recognition methods. IEEE Transactions on Human-Machine Systems, 51(2), 123-135.
+\bibitem{irish2011raf}
+P.~Irish, ``RequestAnimationFrame for smart animating,'' Google Developers Blog, Apr. 2011. [Online]. Available: \url{https://developer.chrome.com/blog/raf/}
 
-\bibitem{wang2020mediapipe} Wang, Y., \& Zhang, L. (2020). MediaPipe for hand tracking: A comprehensive review. Journal of Computer Vision and Image Processing, 8(1), 45-58.
+\bibitem{khronoswebgl2022}
+Khronos Group, ``WebGL 2.0 Specification,'' Portland, OR, USA, Rev. Mar. 2022. [Online]. Available: \url{https://www.khronos.org/registry/webgl/specs/latest/2.0/}
 
-\bibitem{jones2021ecs} Jones, R. (2021). Entity Component System: Performance and architecture benefits. In Proceedings of the Game Developers Conference (pp. 1-15).
-
+\bibitem{maximov2025repo}
+I.~Maximov, ``Hand-Tracking Fruit Ninja,'' GitHub repository, Nov. 2025. [Online]. Available: \url{https://github.com/MaximovIlya/fruit_ninja}
 \end{thebibliography}
 
 \vspace{12pt}

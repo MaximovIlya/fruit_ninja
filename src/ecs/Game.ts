@@ -12,6 +12,7 @@ import { DifficultySystem } from "./systems/DifficultySystem";
 import { wall, apple, orange, banana, watermelon, purple_bomb } from "../assets";
 
 const SAFE_FRUIT_TYPES = ['apple', 'orange', 'banana', 'watermelon'] as const;
+type SpawnableFruit = typeof SAFE_FRUIT_TYPES[number] | 'purple_bomb';
 
 interface GameCallbacks {
     onScoreChange?: (score: number) => void;
@@ -262,7 +263,7 @@ export class Game {
         }
     }
 
-    private pickFruitType(): string {
+    private pickFruitType(): SpawnableFruit {
         const shouldSpawnBomb = Math.random() < this._difficultySystem.bombChance;
         if (shouldSpawnBomb) {
             return 'purple_bomb';
